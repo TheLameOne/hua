@@ -1,0 +1,19 @@
+syntax="proto3";
+
+option go_package="./proto";
+
+package bidirectional;
+
+service Bidirectional{
+  rpc Chatty(stream Request) returns (stream Response);
+}
+
+message Request{
+  string UserName=1;
+string ClientMessage=2;
+}
+
+message Response{
+  string UserName=1;
+  string ResponseMessage=2;
+}
