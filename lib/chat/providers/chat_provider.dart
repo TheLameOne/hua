@@ -99,6 +99,24 @@ class ChatProvider extends ChangeNotifier {
               timestamp: DateTime.now(),
               isSystemMessage: true,
             ));
+          } else if (error.toString().contains('connection') ||
+              error.toString().contains('timeout') ||
+              error.toString().contains('UNAVAILABLE')) {
+            // Connection related errors - attempt automatic reconnection
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Connection lost. Attempting to reconnect...',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+
+            // Attempt automatic reconnection after a short delay
+            Future.delayed(const Duration(seconds: 3), () {
+              if (!_isConnected && !_isConnecting) {
+                reconnect();
+              }
+            });
           } else {
             _addMessage(ChatMessage(
               username: 'System',
@@ -125,13 +143,13 @@ class ChatProvider extends ChangeNotifier {
       // Process existing messages for date separators
       _processExistingMessagesForDateSeparators();
 
-      _addMessage(ChatMessage(
-        username: 'System',
-        message: 'Connected as $username',
-        isOwnMessage: false,
-        timestamp: DateTime.now(),
-        isSystemMessage: true,
-      ));
+      // _addMessage(ChatMessage(
+      //   username: 'System',
+      //   message: 'Connected as $username',
+      //   isOwnMessage: false,
+      //   timestamp: DateTime.now(),
+      //   isSystemMessage: true,
+      // ));
     } catch (e) {
       print('Failed to connect: $e');
 
@@ -377,6 +395,17 @@ class ChatProvider extends ChangeNotifier {
             _addMessage(ChatMessage(
               username: 'System',
               message: 'Session expired. Please login again.',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+          } else if (error.toString().contains('connection') ||
+              error.toString().contains('timeout') ||
+              error.toString().contains('UNAVAILABLE')) {
+            // Connection related errors during reconnection
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Reconnection failed. Will retry...',
               isOwnMessage: false,
               timestamp: DateTime.now(),
               isSystemMessage: true,

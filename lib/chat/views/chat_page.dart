@@ -27,27 +27,10 @@ class _ChatPageState extends State<ChatPage> {
     const Color(0xFFFF5722), // Deep Orange
   ];
 
-  // Message bubble colors - replacing gradients with solid colors
-  final List<Color> _messageColors = [
-    const Color(0xFF6200EA), // Deep Purple
-    const Color(0xFF00BFA5), // Teal
-    const Color(0xFFE91E63), // Pink
-    const Color(0xFF2979FF), // Blue
-    const Color(0xFF00C853), // Green
-    const Color(0xFFD500F9), // Purple
-    const Color(0xFF64B5F6), // Light Blue
-    const Color(0xFF455A64), // Blue Grey
-  ];
-
   // Own message color
   Color get _ownMessageColor => const Color(0xFFEEEEEE); // Light gray
   Color get _otherMessageColor => Colors.white; // White
   Color get _systemMessageColor => const Color(0xFFF5F5F5); // Very light gray
-
-  Color _getUserMessageColor(String name) {
-    // Always return the same color for other users' messages
-    return _otherMessageColor;
-  }
 
   @override
   void initState() {

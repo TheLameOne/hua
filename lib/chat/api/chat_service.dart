@@ -11,6 +11,9 @@ class ChatService {
   Stream<proto.Response>? _responseStream;
   final SecureStorageService _secureStorage = SecureStorageService();
 
+  // Keep alive timer
+  Timer? _keepAliveTimer;
+
   // Track connection state
   bool _isConnecting = false;
   bool get isConnecting => _isConnecting;
@@ -25,20 +28,19 @@ class ChatService {
       final token = await _secureStorage.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
-      }
-      // Create channel with proper options using secure domain
+      } // Create channel with proper options using secure domain
       _channel = ClientChannel(
         'grpc.geonotes.in', // Updated to use domain instead of IP
         port: 443, // Updated to use HTTPS/TLS port
         options: const ChannelOptions(
           credentials:
               ChannelCredentials.secure(), // Updated to use secure credentials
-          idleTimeout: Duration(minutes: 1),
-          connectionTimeout: Duration(seconds: 10),
-          keepAlive: ClientKeepAliveOptions(
-            timeout: Duration(seconds: 10),
-            permitWithoutCalls: true,
-          ),
+          idleTimeout: Duration(minutes: 5), // Increased from 1 minute
+          connectionTimeout: Duration(seconds: 15), // Increased from 10 seconds
+          // keepAlive: ClientKeepAliveOptions(
+          //   timeout: Duration(seconds: 30), // Increased from 10 seconds
+          //   permitWithoutCalls: true,
+          // ),
         ),
       );
 
@@ -79,26 +81,29 @@ class ChatService {
   }
 
   // Send periodic empty messages to keep connection alive
-  // Timer? _keepAliveTimer;
-  // void _startKeepAlivePing() {
-  //   _keepAliveTimer?.cancel();
-  //   _keepAliveTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
-  //     if (isConnected) {
-  //       try {
-  //         // Send an application-level ping with an empty message
-  //         // Since there's no isPing field, we'll use an empty message as a ping
-  //         final pingRequest = proto.Request()..clientMessage = "";
+  void _startKeepAlivePing() {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (isConnected) {
+        try {
+          // Send an application-level ping with an empty message
+          // Use a space character instead of empty string to avoid issues
+          final pingRequest = proto.Request()..clientMessage = " ";
 
-  //         _requestController!.add(pingRequest);
-  //         print('Keepalive ping sent');
-  //       } catch (e) {
-  //         print('Error sending keepalive ping: $e');
-  //       }
-  //     } else {
-  //       timer.cancel();
-  //     }
-  //   });
-  // }
+          _requestController!.add(pingRequest);
+          print('Keepalive ping sent');
+        } catch (e) {
+          print('Error sending keepalive ping: $e');
+          // If ping fails, cancel the timer to prevent further attempts
+          timer.cancel();
+        }
+      } else {
+        print('Connection lost, stopping keepalive');
+        timer.cancel();
+      }
+    });
+    print('Keepalive timer started (1 minute intervals)');
+  }
 
   Stream<proto.Response>? get responseStream => _responseStream;
 
@@ -123,8 +128,8 @@ class ChatService {
   }
 
   Future<void> disconnect() async {
-    // _keepAliveTimer?.cancel();
-    // _keepAliveTimer = null;
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
 
     if (_requestController != null && !_requestController!.isClosed) {
       await _requestController!.close();
