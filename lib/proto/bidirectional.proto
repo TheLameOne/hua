@@ -1,19 +1,20 @@
-syntax="proto3";
-
-option go_package="./proto";
-
+syntax = "proto3";
 package bidirectional;
 
-service Bidirectional{
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./proto";
+service Bidirectional {
   rpc Chatty(stream Request) returns (stream Response);
 }
 
-message Request{
-  string UserName=1;
-string ClientMessage=2;
+message Request {
+  string UserName = 1;
+  string ClientMessage = 2;
 }
 
-message Response{
-  string UserName=1;
-  string ResponseMessage=2;
+message Response {
+  string UserName = 1;
+  string ResponseMessage = 2;
+  google.protobuf.Timestamp CreatedAt = 3;
 }

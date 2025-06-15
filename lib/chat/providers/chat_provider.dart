@@ -5,6 +5,7 @@ import 'package:hua/services/secure_storage_service.dart';
 import 'package:hua/proto/generated/bidirectional.pbgrpc.dart';
 
 import '../../services/notification_service.dart';
+import '../models/chat_message_model.dart';
 
 class ChatProvider extends ChangeNotifier {
   final ChatService _chatService = ChatService();
@@ -34,6 +35,23 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  /// Helper method to convert protobuf timestamp to DateTime
+  DateTime _convertTimestamp(dynamic timestamp) {
+    if (timestamp != null && timestamp.hasSeconds()) {
+      try {
+        final seconds = timestamp.seconds.toInt();
+        final nanos = timestamp.hasNanos() ? timestamp.nanos : 0;
+        return DateTime.fromMillisecondsSinceEpoch(
+          seconds * 1000 + (nanos ~/ 1000000),
+          isUtc: true,
+        ).toLocal();
+      } catch (e) {
+        print('Error converting timestamp: $e');
+      }
+    }
+    return DateTime.now();
+  }
+
   /// Load stored username from secure storage
   Future<String?> getStoredUsername() async {
     return await _secureStorage.getUsername();
@@ -46,42 +64,66 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Check if we have a valid token before connecting
+      final token = await _secureStorage.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found. Please login again.');
+      }
+
       await _chatService.connect();
 
-      // Listen for responses
+      // Listen for responses with timestamp handling
       _responseSubscription = _chatService.responseStream?.listen(
         (response) {
+          // Convert protobuf timestamp to DateTime
+          DateTime messageTime = _convertTimestamp(response.createdAt);
+
           _addMessage(ChatMessage(
             username: response.userName,
             message: response.responseMessage,
             isOwnMessage: response.userName == _username,
-            timestamp: DateTime.now(),
+            timestamp: messageTime,
           ));
         },
         onError: (error) {
           print('Error: $error');
-          _addMessage(ChatMessage(
-            username: 'System',
-            message: 'Connection error: $error',
-            isOwnMessage: false,
-            timestamp: DateTime.now(),
-            isSystemMessage: true,
-          ));
+
+          // Check if it's an authentication error
+          if (error.toString().contains('authentication') ||
+              error.toString().contains('unauthorized') ||
+              error.toString().contains('401')) {
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Authentication failed. Please login again.',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+          } else {
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Connection error: $error',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+          }
         },
         onDone: () {
           print('Stream closed');
           _isConnected = false;
           notifyListeners();
         },
-      );
-
-      // Send username
+      ); // Send username
       _chatService.sendUsername(username);
       _username = username;
       _isConnected = true;
 
       // Save username to secure storage for future use
       await _secureStorage.saveUsername(username);
+
+      // Process existing messages for date separators
+      _processExistingMessagesForDateSeparators();
 
       _addMessage(ChatMessage(
         username: 'System',
@@ -92,9 +134,16 @@ class ChatProvider extends ChangeNotifier {
       ));
     } catch (e) {
       print('Failed to connect: $e');
+
+      // Handle specific authentication errors
+      String errorMessage = 'Failed to connect: $e';
+      if (e.toString().contains('No authentication token found')) {
+        errorMessage = 'Please login to access chat.';
+      }
+
       _addMessage(ChatMessage(
         username: 'System',
-        message: 'Failed to connect: $e',
+        message: errorMessage,
         isOwnMessage: false,
         timestamp: DateTime.now(),
         isSystemMessage: true,
@@ -122,7 +171,7 @@ class ChatProvider extends ChangeNotifier {
         username: _username!,
         message: message,
         isOwnMessage: true,
-        timestamp: DateTime.now(),
+        timestamp: DateTime.now(), // Use current time for own messages
       ));
     } catch (e) {
       print('Failed to send message: $e');
@@ -137,6 +186,9 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _addMessage(ChatMessage message) {
+    // Check if we need to add a date separator before this message
+    _insertDateSeparatorIfNeeded(message);
+
     _messages.add(message);
 
     // Only show notification if app is in background and message is from someone else
@@ -157,6 +209,124 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Insert a date separator system message if the new message is from a different day
+  /// than the last non-system message
+  void _insertDateSeparatorIfNeeded(ChatMessage newMessage) {
+    if (_messages.isEmpty) return;
+
+    // Find the last non-system message
+    ChatMessage? lastNonSystemMessage;
+    for (int i = _messages.length - 1; i >= 0; i--) {
+      if (!_messages[i].isSystemMessage) {
+        lastNonSystemMessage = _messages[i];
+        break;
+      }
+    }
+
+    if (lastNonSystemMessage == null) return;
+
+    // Check if the new message is from a different day
+    final lastMessageDate = DateTime(
+      lastNonSystemMessage.timestamp.year,
+      lastNonSystemMessage.timestamp.month,
+      lastNonSystemMessage.timestamp.day,
+    );
+
+    final newMessageDate = DateTime(
+      newMessage.timestamp.year,
+      newMessage.timestamp.month,
+      newMessage.timestamp.day,
+    );
+
+    if (lastMessageDate != newMessageDate) {
+      // Add a date separator system message
+      final dateMessage = ChatMessage(
+        username: 'System',
+        message: _formatDateSeparator(newMessage.timestamp),
+        isOwnMessage: false,
+        timestamp: newMessage.timestamp,
+        isSystemMessage: true,
+      );
+
+      _messages.add(dateMessage);
+    }
+  }
+
+  /// Format date for separator message
+  String _formatDateSeparator(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate = DateTime(date.year, date.month, date.day);
+
+    if (messageDate == today) {
+      return 'Today';
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      // Format as "January 15, 2024" for older dates
+      const months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ];
+
+      final month = months[date.month - 1];
+      return '$month ${date.day}, ${date.year}';
+    }
+  }
+
+  /// Process existing messages and insert date separators
+  /// This is useful when loading chat history
+  void _processExistingMessagesForDateSeparators() {
+    if (_messages.isEmpty) return;
+
+    final List<ChatMessage> processedMessages = [];
+    DateTime? lastMessageDate;
+
+    for (final message in _messages) {
+      // Skip system messages when checking for date changes
+      if (message.isSystemMessage) {
+        processedMessages.add(message);
+        continue;
+      }
+
+      final messageDate = DateTime(
+        message.timestamp.year,
+        message.timestamp.month,
+        message.timestamp.day,
+      );
+
+      // Add date separator if this is a new day
+      if (lastMessageDate != null && lastMessageDate != messageDate) {
+        final dateMessage = ChatMessage(
+          username: 'System',
+          message: _formatDateSeparator(message.timestamp),
+          isOwnMessage: false,
+          timestamp: message.timestamp,
+          isSystemMessage: true,
+        );
+        processedMessages.add(dateMessage);
+      }
+
+      processedMessages.add(message);
+      lastMessageDate = messageDate;
+    }
+
+    // Replace messages with processed ones
+    _messages.clear();
+    _messages.addAll(processedMessages);
+  }
+
   Future<void> reconnect() async {
     if (_isConnecting) return;
 
@@ -164,6 +334,12 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Check if token is still valid before reconnecting
+      final token = await _secureStorage.getToken();
+      if (token == null) {
+        throw Exception('No valid authentication token. Please login again.');
+      }
+
       _addMessage(ChatMessage(
         username: 'System',
         message: 'Reconnecting...',
@@ -179,37 +355,54 @@ class ChatProvider extends ChangeNotifier {
       // Use the service's reconnect method
       await _chatService.reconnect();
 
-      // Set up response subscription again
+      // Set up response subscription again with timestamp handling
       _responseSubscription = _chatService.responseStream?.listen(
         (response) {
+          // Convert protobuf timestamp to DateTime
+          DateTime messageTime = _convertTimestamp(response.createdAt);
+
           _addMessage(ChatMessage(
             username: response.userName,
             message: response.responseMessage,
             isOwnMessage: response.userName == _username,
-            timestamp: DateTime.now(),
+            timestamp: messageTime,
           ));
         },
         onError: (error) {
           print('Error: $error');
-          _addMessage(ChatMessage(
-            username: 'System',
-            message: 'Connection error: $error',
-            isOwnMessage: false,
-            timestamp: DateTime.now(),
-            isSystemMessage: true,
-          ));
+
+          // Handle authentication errors during reconnect
+          if (error.toString().contains('authentication') ||
+              error.toString().contains('unauthorized')) {
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Session expired. Please login again.',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+          } else {
+            _addMessage(ChatMessage(
+              username: 'System',
+              message: 'Connection error: $error',
+              isOwnMessage: false,
+              timestamp: DateTime.now(),
+              isSystemMessage: true,
+            ));
+          }
         },
         onDone: () {
           print('Stream closed');
           _isConnected = false;
           notifyListeners();
         },
-      );
-
-      // If we have a username, send it to the server
+      ); // If we have a username, send it to the server
       if (_username != null && _username!.isNotEmpty) {
         _chatService.sendUsername(_username!);
         _isConnected = true;
+
+        // Process existing messages for date separators
+        _processExistingMessagesForDateSeparators();
 
         _addMessage(ChatMessage(
           username: 'System',
@@ -221,9 +414,15 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Failed to reconnect: $e');
+
+      String errorMessage = 'Failed to reconnect: $e';
+      if (e.toString().contains('No valid authentication token')) {
+        errorMessage = 'Session expired. Please login again.';
+      }
+
       _addMessage(ChatMessage(
         username: 'System',
-        message: 'Failed to reconnect: $e',
+        message: errorMessage,
         isOwnMessage: false,
         timestamp: DateTime.now(),
         isSystemMessage: true,
@@ -285,20 +484,4 @@ class ChatProvider extends ChangeNotifier {
     disconnect();
     super.dispose();
   }
-}
-
-class ChatMessage {
-  final String username;
-  final String message;
-  final bool isOwnMessage;
-  final DateTime timestamp;
-  final bool isSystemMessage;
-
-  ChatMessage({
-    required this.username,
-    required this.message,
-    required this.isOwnMessage,
-    required this.timestamp,
-    this.isSystemMessage = false,
-  });
 }

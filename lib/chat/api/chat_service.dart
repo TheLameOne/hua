@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:grpc/grpc.dart';
 import 'package:hua/proto/generated/bidirectional.pbgrpc.dart' as proto;
 
+import '../../services/secure_storage_service.dart';
+
 class ChatService {
   late ClientChannel _channel;
   late proto.BidirectionalClient _stub;
   StreamController<proto.Request>? _requestController;
   Stream<proto.Response>? _responseStream;
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   // Track connection state
   bool _isConnecting = false;
@@ -19,6 +22,10 @@ class ChatService {
 
     _isConnecting = true;
     try {
+      final token = await _secureStorage.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
       // Create channel with proper options using secure domain
       _channel = ClientChannel(
         'grpc.geonotes.in', // Updated to use domain instead of IP
@@ -35,13 +42,18 @@ class ChatService {
         ),
       );
 
+      final callOptions = CallOptions(
+        timeout: Duration(minutes: 30),
+        metadata: {
+          'authorization': 'Bearer $token',
+        },
+      );
+
       print(
           'Connecting to ${_channel.host}:${_channel.port} with TLS and keepalive');
       _stub = proto.BidirectionalClient(
         _channel,
-        options: CallOptions(
-          timeout: Duration(minutes: 30),
-        ),
+        options: callOptions,
       );
 
       print('Created stub: $_stub');
@@ -50,11 +62,14 @@ class ChatService {
       _requestController = StreamController<proto.Request>();
 
       // Get the response stream by passing the request controller's stream
-      _responseStream = _stub.chatty(_requestController!.stream);
+      _responseStream = _stub.chatty(
+        _requestController!.stream,
+        options: callOptions,
+      );
       print('Secure stream created with keepalive');
 
       // Start application-level ping to ensure connection stays alive
-      _startKeepAlivePing();
+      // _startKeepAlivePing();
     } catch (e) {
       print('Error connecting to gRPC server: $e');
       rethrow;
@@ -64,26 +79,26 @@ class ChatService {
   }
 
   // Send periodic empty messages to keep connection alive
-  Timer? _keepAliveTimer;
-  void _startKeepAlivePing() {
-    _keepAliveTimer?.cancel();
-    _keepAliveTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
-      if (isConnected) {
-        try {
-          // Send an application-level ping with an empty message
-          // Since there's no isPing field, we'll use an empty message as a ping
-          final pingRequest = proto.Request()..clientMessage = "";
+  // Timer? _keepAliveTimer;
+  // void _startKeepAlivePing() {
+  //   _keepAliveTimer?.cancel();
+  //   _keepAliveTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
+  //     if (isConnected) {
+  //       try {
+  //         // Send an application-level ping with an empty message
+  //         // Since there's no isPing field, we'll use an empty message as a ping
+  //         final pingRequest = proto.Request()..clientMessage = "";
 
-          _requestController!.add(pingRequest);
-          print('Keepalive ping sent');
-        } catch (e) {
-          print('Error sending keepalive ping: $e');
-        }
-      } else {
-        timer.cancel();
-      }
-    });
-  }
+  //         _requestController!.add(pingRequest);
+  //         print('Keepalive ping sent');
+  //       } catch (e) {
+  //         print('Error sending keepalive ping: $e');
+  //       }
+  //     } else {
+  //       timer.cancel();
+  //     }
+  //   });
+  // }
 
   Stream<proto.Response>? get responseStream => _responseStream;
 
@@ -108,8 +123,8 @@ class ChatService {
   }
 
   Future<void> disconnect() async {
-    _keepAliveTimer?.cancel();
-    _keepAliveTimer = null;
+    // _keepAliveTimer?.cancel();
+    // _keepAliveTimer = null;
 
     if (_requestController != null && !_requestController!.isClosed) {
       await _requestController!.close();

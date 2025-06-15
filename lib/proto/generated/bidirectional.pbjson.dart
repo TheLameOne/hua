@@ -33,11 +33,13 @@ const Response$json = {
   '2': [
     {'1': 'UserName', '3': 1, '4': 1, '5': 9, '10': 'UserName'},
     {'1': 'ResponseMessage', '3': 2, '4': 1, '5': 9, '10': 'ResponseMessage'},
+    {'1': 'CreatedAt', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'CreatedAt'},
   ],
 };
 
 /// Descriptor for `Response`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List responseDescriptor = $convert.base64Decode(
     'CghSZXNwb25zZRIaCghVc2VyTmFtZRgBIAEoCVIIVXNlck5hbWUSKAoPUmVzcG9uc2VNZXNzYW'
-    'dlGAIgASgJUg9SZXNwb25zZU1lc3NhZ2U=');
+    'dlGAIgASgJUg9SZXNwb25zZU1lc3NhZ2USOAoJQ3JlYXRlZEF0GAMgASgLMhouZ29vZ2xlLnBy'
+    'b3RvYnVmLlRpbWVzdGFtcFIJQ3JlYXRlZEF0');
 

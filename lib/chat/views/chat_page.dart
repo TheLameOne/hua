@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:hua/chat/providers/chat_provider.dart';
 
 import '../../auth/providers/auth_provider.dart';
+import '../models/chat_message_model.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({Key? key}) : super(key: key);
@@ -123,6 +124,13 @@ class _ChatPageState extends State<ChatPage> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return "$hour:$minute";
+  }
+
+  bool _isDateSeparatorMessage(String message) {
+    // Check if the message is a date separator
+    return message == 'Today' ||
+        message == 'Yesterday' ||
+        RegExp(r'^[A-Za-z]+ \d{1,2}, \d{4}$').hasMatch(message);
   }
 
   @override
@@ -457,32 +465,96 @@ class _ChatPageState extends State<ChatPage> {
     final isSystem = message.isSystemMessage;
 
     if (isSystem) {
-      return Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: _systemMessageColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+      // Check if this is a date separator message
+      final isDateSeparator = _isDateSeparatorMessage(message.message);
+
+      if (isDateSeparator) {
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.grey.shade300,
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  message.message,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.grey.shade300,
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          child: Text(
-            message.message,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
+        );
+      } else {
+        // Regular system message
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _systemMessageColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
+            child: Text(
+              message.message,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     return Padding(

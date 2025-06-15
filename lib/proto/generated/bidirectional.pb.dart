@@ -13,6 +13,8 @@ import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
+import 'google/protobuf/timestamp.pb.dart' as $1;
+
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
 class Request extends $pb.GeneratedMessage {
@@ -77,6 +79,7 @@ class Response extends $pb.GeneratedMessage {
   factory Response({
     $core.String? userName,
     $core.String? responseMessage,
+    $1.Timestamp? createdAt,
   }) {
     final $result = create();
     if (userName != null) {
@@ -84,6 +87,9 @@ class Response extends $pb.GeneratedMessage {
     }
     if (responseMessage != null) {
       $result.responseMessage = responseMessage;
+    }
+    if (createdAt != null) {
+      $result.createdAt = createdAt;
     }
     return $result;
   }
@@ -94,6 +100,7 @@ class Response extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'Response', package: const $pb.PackageName(_omitMessageNames ? '' : 'bidirectional'), createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'UserName', protoName: 'UserName')
     ..aOS(2, _omitFieldNames ? '' : 'ResponseMessage', protoName: 'ResponseMessage')
+    ..aOM<$1.Timestamp>(3, _omitFieldNames ? '' : 'CreatedAt', protoName: 'CreatedAt', subBuilder: $1.Timestamp.create)
     ..hasRequiredFields = false
   ;
 
@@ -129,6 +136,17 @@ class Response extends $pb.GeneratedMessage {
   $core.bool hasResponseMessage() => $_has(1);
   @$pb.TagNumber(2)
   void clearResponseMessage() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $1.Timestamp get createdAt => $_getN(2);
+  @$pb.TagNumber(3)
+  set createdAt($1.Timestamp v) { $_setField(3, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasCreatedAt() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCreatedAt() => $_clearField(3);
+  @$pb.TagNumber(3)
+  $1.Timestamp ensureCreatedAt() => $_ensure(2);
 }
 
 
