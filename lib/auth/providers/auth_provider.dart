@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hua/auth/api/auth_service.dart';
 import 'package:hua/services/secure_storage_service.dart';
+import 'package:hua/services/fcm_service.dart';
 
 /// Authentication status states
 enum AuthStatus {
@@ -65,6 +66,15 @@ class AuthProvider extends ChangeNotifier {
       _username = username;
       _status = AuthStatus.authenticated;
       notifyListeners();
+
+      // Update FCM token after successful login
+      try {
+        await FCMService().checkAndUpdateFCMToken();
+      } catch (e) {
+        debugPrint('Error updating FCM token after login: $e');
+        // Don't fail login if FCM update fails
+      }
+
       return true;
     } catch (e) {
       _status = AuthStatus.error;
@@ -103,6 +113,14 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Use the clearAuthData convenience method
       final success = await _secureStorage.clearAuthData();
+
+      // Clear FCM data during logout
+      try {
+        await FCMService().clearFCMData();
+      } catch (e) {
+        debugPrint('Error clearing FCM data during logout: $e');
+        // Don't fail logout if FCM clear fails
+      }
 
       _token = null;
       _username = null;

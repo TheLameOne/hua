@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "971160597593",
+    "project_id": "hua-chat-app",
+    "storage_bucket": "hua-chat-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971160597593:android:323c253ee61ed16c326d48",
+        "android_client_info": {
+          "package_name": "com.example.hua"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAocW3-H9UFHUBvdzmrmkhN93ESxTUxiCA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:hua/chat/views/chat_page.dart';
 import 'package:hua/chat/providers/chat_provider.dart';
 import 'package:hua/services/notification_service.dart';
+import 'package:hua/services/fcm_service.dart';
 import 'package:hua/profile/views/profile_page.dart';
-import 'package:hua/username_page.dart';
 import 'package:provider/provider.dart';
 import 'auth/providers/auth_provider.dart';
 import 'auth/views/login_page.dart';
 import 'auth/views/signup_page.dart';
-import 'homepage.dart';
 import 'splash/views/splashpage.dart';
+import 'firebase_options.dart';
 
 void main() async {
   // Ensure Flutter is initialized before we do anything else
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase first
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Initialize notification service early
   await NotificationService().init();
+
+  // Initialize FCM service
+  await FCMService().initialize();
 
   runApp(const MyApp());
 }

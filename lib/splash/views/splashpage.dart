@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hua/auth/providers/auth_provider.dart';
+import 'package:hua/services/fcm_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -71,11 +72,17 @@ class _SplashPageState extends State<SplashPage>
     // Wait for a minimum time to show the splash screen
     await Future.delayed(const Duration(milliseconds: 700));
 
-    if (!mounted) return;
-
-    // Navigate based on authentication status
+    if (!mounted) return; // Navigate based on authentication status
     if (authProvider.isAuthenticated) {
-      // User is authenticated, go directly to chat page
+      // User is authenticated, check and update FCM token
+      try {
+        await FCMService().checkAndUpdateFCMToken();
+      } catch (e) {
+        debugPrint('Error updating FCM token in splash: $e');
+        // Don't block navigation if FCM update fails
+      }
+
+      // Go to chat page
       Navigator.of(context).pushReplacementNamed('/chatpage');
     } else {
       // User is not authenticated, go to login page

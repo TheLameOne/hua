@@ -132,8 +132,9 @@ class ChatProvider extends ChangeNotifier {
           _isConnected = false;
           notifyListeners();
         },
-      ); // Send username
-      _chatService.sendUsername(username);
+      );
+
+      // Set connection state and save username
       _username = username;
       _isConnected = true;
 
@@ -425,9 +426,10 @@ class ChatProvider extends ChangeNotifier {
           _isConnected = false;
           notifyListeners();
         },
-      ); // If we have a username, send it to the server
+      );
+
+      // If we have a username, set connection state
       if (_username != null && _username!.isNotEmpty) {
-        _chatService.sendUsername(_username!);
         _isConnected = true;
 
         // Process existing messages for date separators

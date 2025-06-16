@@ -11,9 +11,6 @@ class ChatService {
   Stream<proto.Response>? _responseStream;
   final SecureStorageService _secureStorage = SecureStorageService();
 
-  // Keep alive timer
-  Timer? _keepAliveTimer;
-
   // Track connection state
   bool _isConnecting = false;
   bool get isConnecting => _isConnecting;
@@ -80,42 +77,7 @@ class ChatService {
     }
   }
 
-  // Send periodic empty messages to keep connection alive
-  void _startKeepAlivePing() {
-    _keepAliveTimer?.cancel();
-    _keepAliveTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (isConnected) {
-        try {
-          // Send an application-level ping with an empty message
-          // Use a space character instead of empty string to avoid issues
-          final pingRequest = proto.Request()..clientMessage = " ";
-
-          _requestController!.add(pingRequest);
-          print('Keepalive ping sent');
-        } catch (e) {
-          print('Error sending keepalive ping: $e');
-          // If ping fails, cancel the timer to prevent further attempts
-          timer.cancel();
-        }
-      } else {
-        print('Connection lost, stopping keepalive');
-        timer.cancel();
-      }
-    });
-    print('Keepalive timer started (1 minute intervals)');
-  }
-
   Stream<proto.Response>? get responseStream => _responseStream;
-
-  void sendUsername(String username) {
-    if (_requestController == null || _requestController!.isClosed) {
-      throw Exception('Not connected to server');
-    }
-
-    final usernameRequest = proto.Request()..userName = username;
-    _requestController!.add(usernameRequest);
-    print('Username sent: $username');
-  }
 
   void sendMessage(String message) {
     if (_requestController == null || _requestController!.isClosed) {
@@ -128,9 +90,6 @@ class ChatService {
   }
 
   Future<void> disconnect() async {
-    _keepAliveTimer?.cancel();
-    _keepAliveTimer = null;
-
     if (_requestController != null && !_requestController!.isClosed) {
       await _requestController!.close();
     }
