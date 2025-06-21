@@ -194,12 +194,12 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                     child: CircleAvatar(
                       backgroundColor: Colors.transparent,
-                      radius: 18,
+                      radius: 22, // Increased from 18
                       child: Text(
                         _getInitials(chatProvider.username ?? 'User'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 13, // Slightly increased font size
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -574,8 +574,8 @@ class _ChatPageState extends State<ChatPage> {
           itemCount: chatProvider.messages.length,
           itemBuilder: (context, index) {
             final message = chatProvider.messages[index];
-            final isLastMessage = index == chatProvider.messages.length - 1;
-            return _buildMessageBubble(message, isLastMessage);
+            return _buildMessageBubble(
+                message, index == chatProvider.messages.length - 1);
           },
         ),
         // Scroll to bottom button
@@ -707,60 +707,85 @@ class _ChatPageState extends State<ChatPage> {
       }
     }
 
+    return _buildUserMessage(message);
+  }
+
+  Widget _buildUserMessage(ChatMessage message) {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final currentIndex = chatProvider.messages.indexOf(message);
+
+    // Check if this is the first message in a group
+    bool isFirstInGroup =
+        _isFirstMessageInGroup(message, currentIndex, chatProvider.messages);
+
+    // Check if this is the last message in a group
+    bool isLastInGroup =
+        _isLastMessageInGroup(message, currentIndex, chatProvider.messages);
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.only(
+        top: isFirstInGroup ? 8 : 2,
+        bottom: isLastInGroup ? 8 : 2,
+        left: 0,
+        right: 0,
+      ),
       child: Row(
         mainAxisAlignment: message.isOwnMessage
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
+        crossAxisAlignment: CrossAxisAlignment.end,        children: [
+          // Avatar - only show for first message in group from others
           if (!message.isOwnMessage)
-            Padding(
-              padding: const EdgeInsets.only(right: 12, bottom: 4),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _getUserColor(message.username),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _getUserColor(message.username).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+            Container(
+            width: 46, // Increased from 36 to accommodate larger avatar
+            child: isFirstInGroup
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 12, bottom: 4),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _getUserColor(message.username),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getUserColor(message.username)
+                                .withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        backgroundColor: Colors.transparent,
+                        radius: 22, // Increased from 18
+                        child: Text(
+                          _getInitials(message.username),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13, // Slightly increased font size
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  radius: 18,
-                  child: Text(
-                    _getInitials(message.username),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+                  )
+                : const SizedBox(width: 12), // Spacer for grouped messages
+          ),
           Flexible(
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
                 minWidth: 80,
               ),
-              margin: const EdgeInsets.symmetric(vertical: 2),
+              margin: const EdgeInsets.symmetric(vertical: 1),
               decoration: BoxDecoration(
                 color: message.isOwnMessage
                     ? _getOwnMessageColor(context)
                     : _getOtherMessageColor(context),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(24),
-                  topRight: const Radius.circular(24),
-                  bottomLeft: Radius.circular(message.isOwnMessage ? 24 : 6),
-                  bottomRight: Radius.circular(message.isOwnMessage ? 6 : 24),
-                ),
+                borderRadius: _getMessageBorderRadius(
+                    message, isFirstInGroup, isLastInGroup),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -779,7 +804,8 @@ class _ChatPageState extends State<ChatPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (!message.isOwnMessage)
+                    // Username - only show for first message in group from others
+                    if (!message.isOwnMessage && isFirstInGroup)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: Text(
@@ -787,11 +813,11 @@ class _ChatPageState extends State<ChatPage> {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
-                            color: _getUserColor(message
-                                .username), // Keep username color matching avatar
+                            color: _getUserColor(message.username),
                           ),
                         ),
-                      ), // Message text and timestamp with theme-aware colors
+                      ),
+                    // Message text and timestamp
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.end,
                       spacing: 8,
@@ -836,8 +862,7 @@ class _ChatPageState extends State<ChatPage> {
                               Icon(
                                 Icons.done_all,
                                 size: 14,
-                                color: AppColors
-                                    .accentLight, // Use Pale Azure for status
+                                color: AppColors.accentLight,
                               ),
                             ],
                           ],
@@ -853,6 +878,118 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
     );
+  }
+
+  bool _isFirstMessageInGroup(
+      ChatMessage message, int currentIndex, List<ChatMessage> messages) {
+    if (currentIndex == 0) return true;
+
+    final previousMessage = messages[currentIndex - 1];
+
+    // Different user = start of new group
+    if (previousMessage.username != message.username) return true;
+
+    // System message before = start of new group
+    if (previousMessage.isSystemMessage) return true;
+
+    // Time gap > 5 minutes = start of new group
+    final timeDifference =
+        message.timestamp.difference(previousMessage.timestamp);
+    if (timeDifference.inMinutes > 5) return true;
+
+    return false;
+  }
+
+  bool _isLastMessageInGroup(
+      ChatMessage message, int currentIndex, List<ChatMessage> messages) {
+    if (currentIndex == messages.length - 1) return true;
+
+    final nextMessage = messages[currentIndex + 1];
+
+    // Different user = end of group
+    if (nextMessage.username != message.username) return true;
+
+    // System message after = end of group
+    if (nextMessage.isSystemMessage) return true;
+
+    // Time gap > 5 minutes = end of group
+    final timeDifference = nextMessage.timestamp.difference(message.timestamp);
+    if (timeDifference.inMinutes > 5) return true;
+
+    return false;
+  }
+
+  BorderRadius _getMessageBorderRadius(
+      ChatMessage message, bool isFirstInGroup, bool isLastInGroup) {
+    const double radius = 24.0;
+    const double smallRadius = 6.0;
+
+    if (message.isOwnMessage) {
+      // Own messages (right side)
+      if (isFirstInGroup && isLastInGroup) {
+        // Single message
+        return BorderRadius.circular(radius);
+      } else if (isFirstInGroup) {
+        // First message in group - only bottom right non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(radius),
+          topRight: Radius.circular(radius),
+          bottomLeft: Radius.circular(radius),
+          bottomRight: Radius.circular(smallRadius),
+        );
+      } else if (isLastInGroup) {
+        // Last message in group - only top right non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(radius),
+          topRight: Radius.circular(smallRadius),
+          bottomLeft: Radius.circular(radius),
+          bottomRight: Radius.circular(radius),
+        );
+      } else {
+        // Middle message - top right and bottom right non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(radius),
+          topRight: Radius.circular(smallRadius),
+          bottomLeft: Radius.circular(radius),
+          bottomRight: Radius.circular(smallRadius),
+        );
+      }
+    } else {
+      // Other messages (left side)
+      if (isFirstInGroup && isLastInGroup) {
+        // Single message - bottom left non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(radius),
+          topRight: Radius.circular(radius),
+          bottomLeft: Radius.circular(smallRadius),
+          bottomRight: Radius.circular(radius),
+        );
+      } else if (isFirstInGroup) {
+        // First message in group - only bottom left non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(radius),
+          topRight: Radius.circular(radius),
+          bottomLeft: Radius.circular(smallRadius),
+          bottomRight: Radius.circular(radius),
+        );
+      } else if (isLastInGroup) {
+        // Last message in group - only top left non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(smallRadius),
+          topRight: Radius.circular(radius),
+          bottomLeft: Radius.circular(radius),
+          bottomRight: Radius.circular(radius),
+        );
+      } else {
+        // Middle message - top left and bottom left non-circular
+        return const BorderRadius.only(
+          topLeft: Radius.circular(smallRadius),
+          topRight: Radius.circular(radius),
+          bottomLeft: Radius.circular(smallRadius),
+          bottomRight: Radius.circular(radius),
+        );
+      }
+    }
   }
 
   Widget _buildMessageInput(ChatProvider chatProvider) {

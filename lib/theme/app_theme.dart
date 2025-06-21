@@ -54,7 +54,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ),      // Text Theme
+      ), // Text Theme
       textTheme: GoogleFonts.poppinsTextTheme(
         const TextTheme(
           headlineLarge: TextStyle(
@@ -242,7 +242,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ),      // Text Theme
+      ), // Text Theme
       textTheme: GoogleFonts.poppinsTextTheme(
         const TextTheme(
           headlineLarge: TextStyle(
