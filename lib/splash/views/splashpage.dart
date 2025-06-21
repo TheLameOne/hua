@@ -93,7 +93,6 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -128,7 +127,7 @@ class _SplashPageState extends State<SplashPage>
                         child: Icon(
                           Icons.chat_rounded,
                           size: 60,
-                          color: isDarkMode ? Colors.black87 : Colors.white,
+                          color: Colors.white,
                         ),
                       ),
                     ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hua/chat/providers/chat_provider.dart';
+import 'package:hua/theme/chat_theme.dart';
+import 'package:hua/theme/app_colors.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../models/chat_message_model.dart';
@@ -16,27 +19,55 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
+  bool _showScrollToBottomButton = false;
+  int _unreadMessageCount = 0;
+  int _lastMessageCount = 0;
   final List<Color> _avatarColors = [
-    const Color(0xFF9C27B0), // Purple
-    const Color(0xFF3F51B5), // Indigo
-    const Color(0xFF2196F3), // Blue
-    const Color(0xFF009688), // Teal
-    const Color(0xFF4CAF50), // Green
-    const Color(0xFFFFC107), // Amber
-    const Color(0xFFFF9800), // Orange
-    const Color(0xFFFF5722), // Deep Orange
-  ];
+    const Color(0xFF9C27B0), // Purple - fits perfectly with cosmic theme
+    const Color(0xFF4F518C), // Ultra Violet - from your palette
+    const Color(0xFF907AD6), // Tropical Indigo - from your palette
+    const Color(0xFF7FDEFF), // Pale Azure - from your palette
+    const Color(0xFF6366F1), // Indigo - adjusted to match theme
+    const Color(0xFF8B5CF6), // Violet - cosmic harmony
+    const Color(0xFF06B6D4), // Cyan - complements pale azure
+    const Color(0xFF3B82F6), // Blue - adjusted to cosmic tone
+  ]; // Message colors - using theme extension
+  Color _getOwnMessageColor(BuildContext context) {
+    final chatTheme = Theme.of(context).extension<ChatTheme>();
+    return chatTheme?.myMessageColor ?? const Color(0xFF2196F3);
+  }
 
-  // Own message color
-  Color get _ownMessageColor => const Color(0xFFEEEEEE); // Light gray
-  Color get _otherMessageColor => Colors.white; // White
-  Color get _systemMessageColor => const Color(0xFFF5F5F5); // Very light gray
+  Color _getOtherMessageColor(BuildContext context) {
+    final chatTheme = Theme.of(context).extension<ChatTheme>();
+    return chatTheme?.otherMessageColor ?? const Color(0xFFE0E0E0);
+  }
 
   @override
   void initState() {
     super.initState();
     _autoConnect();
     _messageFocusNode.addListener(_onFocusChange);
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final isAtBottom = _scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 100;
+
+      if (isAtBottom && _showScrollToBottomButton) {
+        setState(() {
+          _showScrollToBottomButton = false;
+          _unreadMessageCount = 0;
+        });
+      } else if (!isAtBottom &&
+          !_showScrollToBottomButton &&
+          _scrollController.position.maxScrollExtent > 200) {
+        setState(() {
+          _showScrollToBottomButton = true;
+        });
+      }
+    }
   }
 
   void _onFocusChange() {
@@ -52,35 +83,46 @@ class _ChatPageState extends State<ChatPage> {
   void _autoConnect() async {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     await chatProvider.connectWithStoredUsername();
+    _lastMessageCount = chatProvider.messages.length;
+
+    // Simple scroll to bottom after connection
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    // Use a slight delay to ensure messages are fully rendered
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          try {
-            _scrollController
-                .animateTo(
-                  _scrollController.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic, // Smoother animation curve
-                )
-                .then((_) {});
-          } catch (e) {
-            print('Error scrolling to bottom: $e');
-          }
-        }
+  void _scrollToBottomAnimated() {
+    if (_scrollController.hasClients) {
+      HapticFeedback.lightImpact();
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+      setState(() {
+        _showScrollToBottomButton = false;
+        _unreadMessageCount = 0;
       });
-    });
+    }
   }
 
   String _getInitials(String name) {
@@ -118,21 +160,24 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Consumer<ChatProvider>(
           builder: (context, chatProvider, _) {
             return AppBar(
-              backgroundColor: Colors.white,
+              backgroundColor: theme.appBarTheme.backgroundColor,
               elevation: 1,
               shadowColor: Colors.black.withOpacity(0.05),
               titleSpacing: 0,
               title: Row(
                 children: [
                   // User avatar
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Container(
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
@@ -168,9 +213,7 @@ class _ChatPageState extends State<ChatPage> {
                       children: [
                         Text(
                           chatProvider.username ?? 'User',
-                          style: const TextStyle(
-                            color: Color(0xFF333333),
-                            fontSize: 16,
+                          style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -194,10 +237,7 @@ class _ChatPageState extends State<ChatPage> {
                               chatProvider.isConnected
                                   ? 'Online'
                                   : 'Connecting...',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
+                              style: theme.textTheme.bodySmall,
                             ),
                           ],
                         ),
@@ -209,7 +249,11 @@ class _ChatPageState extends State<ChatPage> {
               actions: [
                 // Add more action buttons here if needed
                 IconButton(
-                  icon: const Icon(Icons.more_vert, color: Color(0xFF3F51B5)),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color:
+                        isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                  ),
                   onPressed: () {
                     // Show options menu
                     showModalBottomSheet(
@@ -246,14 +290,28 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildOptionsMenu(ChatProvider chatProvider) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
+      color: isDark ? AppColors.cardDark : AppColors.cardLight,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.refresh, color: Color(0xFF3F51B5)),
-            title: const Text('Reconnect'),
+            leading: Icon(
+              Icons.refresh,
+              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            ),
+            title: Text(
+              'Reconnect',
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
             onTap: () async {
               Navigator.pop(context); // Close bottom sheet
 
@@ -284,8 +342,18 @@ class _ChatPageState extends State<ChatPage> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Logout'),
+            leading: Icon(
+              Icons.logout,
+              color: isDark ? AppColors.errorDark : AppColors.errorLight,
+            ),
+            title: Text(
+              'Logout',
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
             onTap: () async {
               Navigator.pop(context); // Close bottom sheet
 
@@ -293,17 +361,46 @@ class _ChatPageState extends State<ChatPage> {
               final shouldLogout = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Confirm Logout'),
-                  content: const Text('Are you sure you want to log out?'),
+                  backgroundColor:
+                      isDark ? AppColors.cardDark : AppColors.cardLight,
+                  title: Text(
+                    'Confirm Logout',
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  content: Text(
+                    'Are you sure you want to log out?',
+                    style: TextStyle(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('CANCEL'),
+                      child: Text(
+                        'CANCEL',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('LOGOUT',
-                          style: TextStyle(color: Colors.red)),
+                      child: Text(
+                        'LOGOUT',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.errorDark
+                              : AppColors.errorLight,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -387,7 +484,28 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMessageList(ChatProvider chatProvider) {
-    _scrollToBottom();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Check for new messages and update unread count
+    if (chatProvider.messages.length > _lastMessageCount) {
+      final newMessageCount = chatProvider.messages.length - _lastMessageCount;
+
+      // Only update unread count if user is not at bottom
+      if (_showScrollToBottomButton) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _unreadMessageCount += newMessageCount;
+          });
+        });
+      } else {
+        // Auto-scroll to bottom if user is already at bottom
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+      }
+      _lastMessageCount = chatProvider.messages.length;
+    }
 
     if (chatProvider.messages.isEmpty) {
       return Center(
@@ -397,13 +515,25 @@ class _ChatPageState extends State<ChatPage> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [
+                          AppColors.primaryDark.withOpacity(0.2),
+                          AppColors.accentDark.withOpacity(0.1)
+                        ]
+                      : [
+                          AppColors.primaryLight.withOpacity(0.1),
+                          AppColors.accentLight.withOpacity(0.1)
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 48,
-                color: Colors.grey.shade400,
+                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
               ),
             ),
             const SizedBox(height: 24),
@@ -414,7 +544,9 @@ class _ChatPageState extends State<ChatPage> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
             const SizedBox(height: 8),
@@ -424,7 +556,9 @@ class _ChatPageState extends State<ChatPage> {
                   : 'Please wait while we establish connection',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
           ],
@@ -432,26 +566,46 @@ class _ChatPageState extends State<ChatPage> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: chatProvider.messages.length,
-      itemBuilder: (context, index) {
-        final message = chatProvider.messages[index];
-        final isLastMessage = index == chatProvider.messages.length - 1;
-        return _buildMessageBubble(message, isLastMessage);
-      },
+    return Stack(
+      children: [
+        ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: chatProvider.messages.length,
+          itemBuilder: (context, index) {
+            final message = chatProvider.messages[index];
+            final isLastMessage = index == chatProvider.messages.length - 1;
+            return _buildMessageBubble(message, isLastMessage);
+          },
+        ),
+        // Scroll to bottom button
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          right: 16,
+          bottom: _showScrollToBottomButton ? 16 : -60,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            opacity: _showScrollToBottomButton ? 1.0 : 0.0,
+            child: _buildScrollToBottomButton(),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildMessageBubble(ChatMessage message, bool isLastMessage) {
     final isSystem = message.isSystemMessage;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (isSystem) {
       // Check if this is a date separator message
       final isDateSeparator = _isDateSeparatorMessage(message.message);
-
       if (isDateSeparator) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 16),
           child: Row(
@@ -463,7 +617,7 @@ class _ChatPageState extends State<ChatPage> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        Colors.grey.shade300,
+                        isDark ? AppColors.borderDark : AppColors.borderLight,
                         Colors.transparent,
                       ],
                     ),
@@ -475,20 +629,22 @@ class _ChatPageState extends State<ChatPage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.grey.shade300,
+                    color:
+                        isDark ? AppColors.borderDark : AppColors.borderLight,
                     width: 1,
                   ),
                 ),
                 child: Text(
                   message.message,
                   style: TextStyle(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
-                    letterSpacing: 0.3,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -499,7 +655,7 @@ class _ChatPageState extends State<ChatPage> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        Colors.grey.shade300,
+                        isDark ? AppColors.borderDark : AppColors.borderLight,
                         Colors.transparent,
                       ],
                     ),
@@ -516,11 +672,17 @@ class _ChatPageState extends State<ChatPage> {
             margin: const EdgeInsets.symmetric(vertical: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: _systemMessageColor,
+              color: Theme.of(context)
+                      .extension<ChatTheme>()
+                      ?.systemMessageColor ??
+                  (isDark ? AppColors.cardDark : AppColors.cardLight),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight)
+                      .withOpacity(0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -531,7 +693,12 @@ class _ChatPageState extends State<ChatPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
+                color: Theme.of(context)
+                        .extension<ChatTheme>()
+                        ?.systemMessageTextColor ??
+                    (isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
               ),
               textAlign: TextAlign.center,
             ),
@@ -586,8 +753,8 @@ class _ChatPageState extends State<ChatPage> {
               margin: const EdgeInsets.symmetric(vertical: 2),
               decoration: BoxDecoration(
                 color: message.isOwnMessage
-                    ? _ownMessageColor
-                    : _otherMessageColor,
+                    ? _getOwnMessageColor(context)
+                    : _getOtherMessageColor(context),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(24),
                   topRight: const Radius.circular(24),
@@ -624,8 +791,7 @@ class _ChatPageState extends State<ChatPage> {
                                 .username), // Keep username color matching avatar
                           ),
                         ),
-                      ),
-                    // Message text and timestamp with updated colors
+                      ), // Message text and timestamp with theme-aware colors
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.end,
                       spacing: 8,
@@ -633,8 +799,17 @@ class _ChatPageState extends State<ChatPage> {
                         Text(
                           message.message,
                           style: TextStyle(
-                            color: Colors.grey
-                                .shade800, // Dark gray text for better contrast
+                            color: message.isOwnMessage
+                                ? Theme.of(context)
+                                        .extension<ChatTheme>()
+                                        ?.myMessageTextColor ??
+                                    Colors.white
+                                : Theme.of(context)
+                                        .extension<ChatTheme>()
+                                        ?.otherMessageTextColor ??
+                                    (isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimaryLight),
                             fontSize: 15,
                             fontWeight: FontWeight.w400,
                             height: 1.3,
@@ -648,7 +823,11 @@ class _ChatPageState extends State<ChatPage> {
                               _formatTime(message.timestamp),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey.shade500,
+                                color: message.isOwnMessage
+                                    ? Colors.white.withOpacity(0.8)
+                                    : (isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -657,8 +836,8 @@ class _ChatPageState extends State<ChatPage> {
                               Icon(
                                 Icons.done_all,
                                 size: 14,
-                                color: Colors.blue
-                                    .shade300, // Keep blue for status indicators
+                                color: AppColors
+                                    .accentLight, // Use Pale Azure for status
                               ),
                             ],
                           ],
@@ -679,14 +858,19 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessageInput(ChatProvider chatProvider) {
     final isConnected = chatProvider.isConnected;
     final isConnecting = chatProvider.isConnecting;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: (isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight)
+                .withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -699,10 +883,14 @@ class _ChatPageState extends State<ChatPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FB),
+                  color: isDark
+                      ? AppColors.inputFillDark
+                      : AppColors.inputFillLight,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: isDark
+                        ? AppColors.inputBorderDark
+                        : AppColors.inputBorderLight,
                     width: 1,
                   ),
                 ),
@@ -717,16 +905,32 @@ class _ChatPageState extends State<ChatPage> {
                             ? ' Type a message'
                             : ' Disconnected',
                     hintStyle: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                       fontSize: 16,
                     ),
                     border: InputBorder.none,
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? AppColors.inputFocusedBorderDark
+                            : AppColors.inputFocusedBorderLight,
+                        width: 2,
+                      ),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 14,
                     ),
                   ),
-                  style: const TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _sendMessage(chatProvider),
                   minLines: 1,
@@ -735,17 +939,28 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             const SizedBox(width: 12),
-            // Updated send button to match the minimalist design
+            // Beautiful gradient-inspired send button
             Container(
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: const Color(
-                    0xFF3F51B5), // Keep a subtle color for the send button
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [AppColors.gradientStartDark, AppColors.gradientEndDark]
+                      : [
+                          AppColors.primaryLight,
+                          Color(0xFF7FDEFF)
+                        ], // Ultra Violet to Pale Azure
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: (isDark
+                            ? AppColors.primaryDark
+                            : AppColors.primaryLight)
+                        .withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -787,6 +1002,87 @@ class _ChatPageState extends State<ChatPage> {
       chatProvider.sendMessage(message);
       _messageController.clear();
       FocusScope.of(context).requestFocus(_messageFocusNode);
+
+      // Always scroll to bottom and reset unread count when sending a message
+      setState(() {
+        _showScrollToBottomButton = false;
+        _unreadMessageCount = 0;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     }
+  }
+
+  Widget _buildScrollToBottomButton() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: _scrollToBottomAnimated,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : AppColors.cardLight,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            width: 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                size: 24,
+              ),
+            ),
+            // Unread message count badge
+            if (_unreadMessageCount > 0)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.errorDark : AppColors.errorLight,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                      width: 2,
+                    ),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    _unreadMessageCount > 99
+                        ? '99+'
+                        : _unreadMessageCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

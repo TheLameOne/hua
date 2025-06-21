@@ -1,46 +1,71 @@
-// import 'package:flutter/material.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-// /// Controller for managing theme state and persistence
-// class ThemeController extends ChangeNotifier {
-//   static const String _themeKey = 'theme_mode';
-//   ThemeMode _themeMode = ThemeMode.system;
+class ThemeProvider extends ChangeNotifier {
+  ThemeMode _themeMode = ThemeMode.system;
 
-//   ThemeMode get themeMode => _themeMode;
+  ThemeMode get themeMode => _themeMode;
 
-//   bool get isDarkMode {
-//     if (_themeMode == ThemeMode.system) {
-//       return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-//           Brightness.dark;
-//     }
-//     return _themeMode == ThemeMode.dark;
-//   }
+  bool get isDarkMode {
+    if (_themeMode == ThemeMode.system) {
+      return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark;
+    }
+    return _themeMode == ThemeMode.dark;
+  }
 
-//   bool get isLightMode => !isDarkMode;
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
+    _updateSystemUIOverlay();
+  }
 
-//   /// Initialize theme from shared preferences
-//   Future<void> init() async {
-//     final prefs = await SharedPreferences.getInstance();
-//     final themeModeIndex = prefs.getInt(_themeKey) ?? ThemeMode.system.index;
-//     _themeMode = ThemeMode.values[themeModeIndex];
-//     notifyListeners();
-//   }
+  void toggleTheme() {
+    if (_themeMode == ThemeMode.light) {
+      _themeMode = ThemeMode.dark;
+    } else if (_themeMode == ThemeMode.dark) {
+      _themeMode = ThemeMode.system;
+    } else {
+      _themeMode = ThemeMode.light;
+    }
+    notifyListeners();
+    _updateSystemUIOverlay();
+  }
 
-//   /// Set theme mode and persist to shared preferences
-//   Future<void> setThemeMode(ThemeMode mode) async {
-//     if (_themeMode == mode) return;
+  void _updateSystemUIOverlay() {
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : Colors.white,
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
+  }
 
-//     _themeMode = mode;
-//     notifyListeners();
+  String get themeModeText {
+    switch (_themeMode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System';
+    }
+  }
 
-//     final prefs = await SharedPreferences.getInstance();
-//     await prefs.setInt(_themeKey, mode.index);
-//   }
-
-//   /// Toggle between light and dark modes
-//   Future<void> toggleTheme() async {
-//     final newMode =
-//         _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-//     await setThemeMode(newMode);
-//   }
-// }
+  IconData get themeModeIcon {
+    switch (_themeMode) {
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+    }
+  }
+}
