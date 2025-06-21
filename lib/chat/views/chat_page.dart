@@ -467,52 +467,52 @@ class _ChatPageState extends State<ChatPage> {
               }
             },
           ),
-          ListTile(
-            leading: Icon(
-              Icons.people_outline,
-              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-            ),
-            title: Text(
-              'Refresh Profile Pictures',
-              style: TextStyle(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-            ),
-            onTap: () async {
-              Navigator.pop(context); // Close bottom sheet
+          // ListTile(
+          //   leading: Icon(
+          //     Icons.people_outline,
+          //     color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+          //   ),
+          //   title: Text(
+          //     'Refresh Profile Pictures',
+          //     style: TextStyle(
+          //       color: isDark
+          //           ? AppColors.textPrimaryDark
+          //           : AppColors.textPrimaryLight,
+          //     ),
+          //   ),
+          //   onTap: () async {
+          //     Navigator.pop(context); // Close bottom sheet
 
-              // Show loading indicator
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
+          //     // Show loading indicator
+          //     showDialog(
+          //       context: context,
+          //       barrierDismissible: false,
+          //       builder: (context) => const Center(
+          //         child: CircularProgressIndicator(),
+          //       ),
+          //     );
 
-              try {
-                await context
-                    .read<UserProfileProvider>()
-                    .fetchAllUsersProfilePics();
-                if (mounted) {
-                  Navigator.pop(context); // Dismiss loading dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile pictures refreshed')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  Navigator.pop(context); // Dismiss loading dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Error refreshing profile pictures: $e')),
-                  );
-                }
-              }
-            },
-          ),
+          //     try {
+          //       await context
+          //           .read<UserProfileProvider>()
+          //           .fetchAllUsersProfilePics();
+          //       if (mounted) {
+          //         Navigator.pop(context); // Dismiss loading dialog
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           const SnackBar(content: Text('Profile pictures refreshed')),
+          //         );
+          //       }
+          //     } catch (e) {
+          //       if (mounted) {
+          //         Navigator.pop(context); // Dismiss loading dialog
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //           SnackBar(
+          //               content: Text('Error refreshing profile pictures: $e')),
+          //         );
+          //       }
+          //     }
+          //   },
+          // ),
         ],
       ),
     );
@@ -852,39 +852,42 @@ class _ChatPageState extends State<ChatPage> {
                             color: ProfileUtils.getUserColor(message.username),
                           ),
                         ),
-                      ),
-                    // Message text and timestamp
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.end,
-                      spacing: 8,
+                      ), // Message text and timestamp
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          message.message,
-                          style: TextStyle(
-                            color: message.isOwnMessage
-                                ? Theme.of(context)
-                                        .extension<ChatTheme>()
-                                        ?.myMessageTextColor ??
-                                    Colors.white
-                                : Theme.of(context)
-                                        .extension<ChatTheme>()
-                                        ?.otherMessageTextColor ??
-                                    (isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimaryLight),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                            height: 1.3,
+                        // Message text - takes only needed space
+                        Flexible(
+                          child: Text(
+                            message.message,
+                            style: TextStyle(
+                              color: message.isOwnMessage
+                                  ? Theme.of(context)
+                                          .extension<ChatTheme>()
+                                          ?.myMessageTextColor ??
+                                      Colors.white
+                                  : Theme.of(context)
+                                          .extension<ChatTheme>()
+                                          ?.otherMessageTextColor ??
+                                      (isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimaryLight),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              height: 1.3,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
+                        // Timestamp - fixed width at the end
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               _formatTime(message.timestamp),
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 8,
                                 color: message.isOwnMessage
                                     ? Colors.white.withOpacity(0.8)
                                     : (isDark
