@@ -6,14 +6,14 @@ import 'package:flutter/material.dart';
 class ProfileUtils {
   // Consistent avatar colors used across the app
   static const List<Color> _avatarColors = [
-    Color(0xFF9C27B0), // Purple - fits perfectly with cosmic theme
-    Color(0xFF4F518C), // Ultra Violet - from your palette
-    Color(0xFF907AD6), // Tropical Indigo - from your palette
-    Color(0xFF7FDEFF), // Pale Azure - from your palette
-    Color(0xFF6366F1), // Indigo - adjusted to match theme
-    Color(0xFF8B5CF6), // Violet - cosmic harmony
-    Color(0xFF06B6D4), // Cyan - complements pale azure
-    Color(0xFF3B82F6), // Blue - adjusted to cosmic tone
+    Color(0xFF9C27B0), // Material Purple - good contrast in both themes
+    Color(0xFFE91E63), // Material Pink - vibrant and visible
+    Color(0xFF673AB7), // Deep Purple - balanced visibility
+    Color(0xFF3F51B5), // Material Indigo - works well in both modes
+    Color(0xFF2196F3), // Material Blue - excellent contrast
+    Color(0xFF00BCD4), // Material Cyan - bright and clear
+    Color(0xFF009688), // Material Teal - good saturation
+    Color(0xFFFF9800), // Material Orange - high visibility
   ];
 
   /// Get a consistent color for a user based on their username
