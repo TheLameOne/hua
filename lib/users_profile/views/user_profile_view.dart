@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/profile_color.dart';
 import '../providers/user_profile_provider.dart';
 import '../model/user_profile_model.dart';
 
@@ -216,36 +217,10 @@ class _UserProfileViewState extends State<UserProfileView> {
     return Column(
       children: [
         // Avatar
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: provider.getUserColor(profile.username).withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: CircleAvatar(
-            backgroundColor: profile.profilePic != null
-                ? Colors.transparent
-                : provider.getUserColor(profile.username),
-            radius: 60,
-            backgroundImage: profile.profilePic != null
-                ? NetworkImage(profile.profilePic!)
-                : null,
-            child: profile.profilePic == null
-                ? Text(
-                    provider.getInitials(profile.username),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
-          ),
+        ProfileUtils.buildProfileAvatar(
+          username: profile.username,
+          profilePic: profile.profilePic,
+          radius: 60,
         ),
         const SizedBox(height: 20),
 

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +7,7 @@ import 'package:hua/theme/chat_theme.dart';
 import 'package:hua/theme/app_colors.dart';
 import 'package:hua/users_profile/views/user_profile_view.dart';
 import 'package:hua/users_profile/providers/user_profile_provider.dart';
+import 'package:hua/utils/profile_color.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../models/chat_message_model.dart';
@@ -26,16 +26,8 @@ class _ChatPageState extends State<ChatPage> {
   bool _showScrollToBottomButton = false;
   int _unreadMessageCount = 0;
   int _lastMessageCount = 0;
-  final List<Color> _avatarColors = [
-    const Color(0xFF9C27B0), // Purple - fits perfectly with cosmic theme
-    const Color(0xFF4F518C), // Ultra Violet - from your palette
-    const Color(0xFF907AD6), // Tropical Indigo - from your palette
-    const Color(0xFF7FDEFF), // Pale Azure - from your palette
-    const Color(0xFF6366F1), // Indigo - adjusted to match theme
-    const Color(0xFF8B5CF6), // Violet - cosmic harmony
-    const Color(0xFF06B6D4), // Cyan - complements pale azure
-    const Color(0xFF3B82F6), // Blue - adjusted to cosmic tone
-  ]; // Message colors - using theme extension
+
+  // Message colors - using theme extension
   Color _getOwnMessageColor(BuildContext context) {
     final chatTheme = Theme.of(context).extension<ChatTheme>();
     return chatTheme?.myMessageColor ?? const Color(0xFF2196F3);
@@ -147,26 +139,6 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  String _getInitials(String name) {
-    if (name.isEmpty) return '';
-    final nameParts = name.trim().split(' ');
-    if (nameParts.length > 1) {
-      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
-    }
-    return name.length > 1
-        ? name.substring(0, 2).toUpperCase()
-        : name[0].toUpperCase();
-  }
-
-  Color _getUserColor(String name) {
-    if (name == 'System') return Colors.grey;
-    int hash = 0;
-    for (var i = 0; i < name.length; i++) {
-      hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-    }
-    return _avatarColors[hash.abs() % _avatarColors.length];
-  }
-
   String _formatTime(DateTime time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
@@ -207,23 +179,12 @@ class _ChatPageState extends State<ChatPage> {
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        color: _getUserColor(chatProvider.username ?? 'User'),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                _getUserColor(chatProvider.username ?? 'User')
-                                    .withOpacity(0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: _buildUserAvatar(
-                        chatProvider.username ?? 'User',
-                        22,
-                        fontSize: 13,
+                      child: ProfileUtils.buildUserChatAvatar(
+                        username: chatProvider.username ?? 'User',
+                        radius: 22,
+                        onTap: () {
+                          Navigator.pushNamed(context, '/profilepage');
+                        },
                       ),
                     ),
                   ),
@@ -830,24 +791,19 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           );
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _getUserColor(message.username),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: _getUserColor(message.username)
-                                    .withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                        child: ProfileUtils.buildChatAvatar(
+                          username: message.username,
+                          radius: 22,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => UserProfileView(
+                                  username: message.username,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: _buildUserAvatar(
-                            message.username,
-                            22,
-                            fontSize: 13,
-                          ),
+                            );
+                          },
                         ),
                       ),
                     )
@@ -893,7 +849,7 @@ class _ChatPageState extends State<ChatPage> {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
-                            color: _getUserColor(message.username),
+                            color: ProfileUtils.getUserColor(message.username),
                           ),
                         ),
                       ),
@@ -1298,59 +1254,6 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserAvatar(String username, double radius, {double? fontSize}) {
-    return Consumer<UserProfileProvider>(
-      builder: (context, userProfileProvider, child) {
-        final profilePic =
-            userProfileProvider.getProfilePicForUsername(username);
-
-        if (profilePic != null && profilePic.isNotEmpty) {
-          try {
-            // Process base64 data properly
-            String base64Data = profilePic;
-
-            // Clean up the base64 string if it has data URL prefix
-            if (base64Data.contains(',')) {
-              base64Data = base64Data.split(',').last.trim();
-            }
-
-            // Decode the base64 data to bytes
-            final imageBytes = base64Decode(base64Data);
-
-            // Return a CircleAvatar with the decoded image
-            return CircleAvatar(
-              radius: radius,
-              backgroundColor: _getUserColor(username),
-              backgroundImage: MemoryImage(imageBytes),
-              // Fallback to initials if image fails to load
-              child: _buildDefaultAvatar(username, radius, fontSize),
-            );
-          } catch (e) {
-            // If decoding fails, return the default avatar
-            return _buildDefaultAvatar(username, radius, fontSize);
-          }
-        }
-
-        return _buildDefaultAvatar(username, radius, fontSize);
-      },
-    );
-  }
-
-  Widget _buildDefaultAvatar(String username, double radius, double? fontSize) {
-    return CircleAvatar(
-      backgroundColor: Colors.transparent,
-      radius: radius,
-      child: Text(
-        _getInitials(username),
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: fontSize ?? 13,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );
