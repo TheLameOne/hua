@@ -70,19 +70,27 @@ class MyProfileService {
   /// Update user profile picture
   Future<bool> updateProfilePicture(File imageFile) async {
     try {
+      // Get token from secure storage
+      final token = await _secureStorage.getToken();
+      if (token == null) {
+        print('Error: No authentication token found');
+        return false;
+      }
+
       // Create form data with multipart file
       final formData = FormData.fromMap({
-        'profilePic': await MultipartFile.fromFile(
+        'image': await MultipartFile.fromFile(
           imageFile.path,
           filename: 'profile_picture.jpg',
         ),
       });
 
       final response = await _dio.patch(
-        '',
+        'https://api.geonotes.in/api/userProfilePic',
         data: formData,
         options: Options(
           headers: {
+            'Authorization': 'Bearer $token',
             'Content-Type': 'multipart/form-data',
           },
         ),

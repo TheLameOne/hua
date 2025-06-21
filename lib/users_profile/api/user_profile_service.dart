@@ -93,12 +93,12 @@ class UserProfileService {
   Future<Map<String, String?>> getAllUsersProfilePic() async {
     try {
       final path = '/usersProfilePic';
-      debugPrint('Fetching all users profile pics from: $baseUrl$path');
+      // debugPrint('Fetching all users profile pics from: $baseUrl$path');
 
       final response = await _dio.get(path);
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response data: ${response.data}');
+      // debugPrint('Response status: ${response.statusCode}');
+      // debugPrint('Response data: ${response.data}');
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;

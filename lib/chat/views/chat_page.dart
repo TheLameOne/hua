@@ -43,10 +43,18 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _autoConnect();
     _messageFocusNode.addListener(_onFocusChange);
-    _scrollController.addListener(_onScroll);
-    // Fetch all users profile pictures
+    _scrollController
+        .addListener(_onScroll); // Fetch all users profile pictures
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<UserProfileProvider>().fetchAllUsersProfilePics();
+      context.read<UserProfileProvider>().fetchAllUsersProfilePics().then((_) {
+        // Preload profile images for better performance
+        final userProfileProvider = context.read<UserProfileProvider>();
+        final profilePics = userProfileProvider.usersProfilePics.values
+            .where((profilePic) => profilePic?.isNotEmpty == true)
+            .map((profilePic) => profilePic!)
+            .toList();
+        ProfileUtils.preloadProfileImages(profilePics);
+      });
       _startProfilePicsRefreshTimer();
     });
   }
@@ -179,11 +187,19 @@ class _ChatPageState extends State<ChatPage> {
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
-                      child: ProfileUtils.buildUserChatAvatar(
-                        username: chatProvider.username ?? 'User',
-                        radius: 22,
-                        onTap: () {
-                          Navigator.pushNamed(context, '/profilepage');
+                      child: Consumer<UserProfileProvider>(
+                        builder: (context, userProfileProvider, child) {
+                          final profilePic =
+                              userProfileProvider.getProfilePicForUsername(
+                                  chatProvider.username ?? 'User');
+                          return ProfileUtils.buildUserChatAvatar(
+                            username: chatProvider.username ?? 'User',
+                            profilePic: profilePic,
+                            radius: 22,
+                            onTap: () {
+                              Navigator.pushNamed(context, '/profilepage');
+                            },
+                          );
                         },
                       ),
                     ),
@@ -420,13 +436,14 @@ class _ChatPageState extends State<ChatPage> {
                   await Future.any([
                     chatProvider.clearStoredUsername(),
                     Future.delayed(const Duration(seconds: 2))
-                  ]);
-
-                  // Add timeout to logout
+                  ]); // Add timeout to logout
                   await Future.any([
                     authProvider.logout(),
                     Future.delayed(const Duration(seconds: 2))
                   ]);
+
+                  // Clear profile image caches for security
+                  ProfileUtils.clearAllCaches();
 
                   // Navigate to splash screen
                   if (mounted) {
@@ -791,17 +808,24 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           );
                         },
-                        child: ProfileUtils.buildChatAvatar(
-                          username: message.username,
-                          radius: 22,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UserProfileView(
-                                  username: message.username,
-                                ),
-                              ),
+                        child: Consumer<UserProfileProvider>(
+                          builder: (context, userProfileProvider, child) {
+                            final profilePic = userProfileProvider
+                                .getProfilePicForUsername(message.username);
+                            return ProfileUtils.buildUserChatAvatar(
+                              username: message.username,
+                              profilePic: profilePic,
+                              radius: 22,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfileView(
+                                      username: message.username,
+                                    ),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),
