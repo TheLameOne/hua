@@ -1,9 +1,13 @@
+import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hua/chat/providers/chat_provider.dart';
 import 'package:hua/theme/chat_theme.dart';
 import 'package:hua/theme/app_colors.dart';
+import 'package:hua/users_profile/views/user_profile_view.dart';
+import 'package:hua/users_profile/providers/user_profile_provider.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../models/chat_message_model.dart';
@@ -48,6 +52,23 @@ class _ChatPageState extends State<ChatPage> {
     _autoConnect();
     _messageFocusNode.addListener(_onFocusChange);
     _scrollController.addListener(_onScroll);
+    // Fetch all users profile pictures
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserProfileProvider>().fetchAllUsersProfilePics();
+      _startProfilePicsRefreshTimer();
+    });
+  }
+
+  Timer? _profilePicsRefreshTimer;
+
+  void _startProfilePicsRefreshTimer() {
+    // Refresh profile pictures every 5 minutes
+    _profilePicsRefreshTimer =
+        Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (mounted) {
+        context.read<UserProfileProvider>().fetchAllUsersProfilePics();
+      }
+    });
   }
 
   void _onScroll() {
@@ -107,6 +128,7 @@ class _ChatPageState extends State<ChatPage> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _messageFocusNode.dispose();
+    _profilePicsRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -178,70 +200,76 @@ class _ChatPageState extends State<ChatPage> {
                 children: [
                   // User avatar
                   const SizedBox(width: 16),
-                  Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: _getUserColor(chatProvider.username ?? 'User'),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _getUserColor(chatProvider.username ?? 'User')
-                              .withOpacity(0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.transparent,
-                      radius: 22, // Increased from 18
-                      child: Text(
-                        _getInitials(chatProvider.username ?? 'User'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13, // Slightly increased font size
-                          fontWeight: FontWeight.bold,
-                        ),
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to my profile page
+                      Navigator.pushNamed(context, '/profilepage');
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: _getUserColor(chatProvider.username ?? 'User'),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                _getUserColor(chatProvider.username ?? 'User')
+                                    .withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _buildUserAvatar(
+                        chatProvider.username ?? 'User',
+                        22,
+                        fontSize: 13,
                       ),
                     ),
                   ),
                   // Username and status
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          chatProvider.username ?? 'User',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to my profile page
+                        Navigator.pushNamed(context, '/profilepage');
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            chatProvider.username ?? 'User',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: chatProvider.isConnected
-                                    ? Colors.green
-                                    : Colors.grey,
-                                shape: BoxShape.circle,
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: chatProvider.isConnected
+                                      ? Colors.green
+                                      : Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              chatProvider.isConnected
-                                  ? 'Online'
-                                  : 'Connecting...',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 4),
+                              Text(
+                                chatProvider.isConnected
+                                    ? 'Online'
+                                    : 'Connecting...',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -474,6 +502,52 @@ class _ChatPageState extends State<ChatPage> {
                       }
                     });
                   }
+                }
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.people_outline,
+              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            ),
+            title: Text(
+              'Refresh Profile Pictures',
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+            onTap: () async {
+              Navigator.pop(context); // Close bottom sheet
+
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+
+              try {
+                await context
+                    .read<UserProfileProvider>()
+                    .fetchAllUsersProfilePics();
+                if (mounted) {
+                  Navigator.pop(context); // Dismiss loading dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile pictures refreshed')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context); // Dismiss loading dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Error refreshing profile pictures: $e')),
+                  );
                 }
               }
             },
@@ -736,43 +810,49 @@ class _ChatPageState extends State<ChatPage> {
         mainAxisAlignment: message.isOwnMessage
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,        children: [
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
           // Avatar - only show for first message in group from others
           if (!message.isOwnMessage)
             Container(
-            width: 46, // Increased from 36 to accommodate larger avatar
-            child: isFirstInGroup
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 12, bottom: 4),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getUserColor(message.username),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getUserColor(message.username)
-                                .withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+              width: 46, // Increased from 36 to accommodate larger avatar
+              child: isFirstInGroup
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 12, bottom: 4),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Navigate to user profile view
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfileView(
+                                username: message.username,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _getUserColor(message.username),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _getUserColor(message.username)
+                                    .withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        backgroundColor: Colors.transparent,
-                        radius: 22, // Increased from 18
-                        child: Text(
-                          _getInitials(message.username),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13, // Slightly increased font size
-                            fontWeight: FontWeight.bold,
+                          child: _buildUserAvatar(
+                            message.username,
+                            22,
+                            fontSize: 13,
                           ),
                         ),
                       ),
-                    ),
-                  )
-                : const SizedBox(width: 12), // Spacer for grouped messages
-          ),
+                    )
+                  : const SizedBox(width: 12), // Spacer for grouped messages
+            ),
           Flexible(
             child: Container(
               constraints: BoxConstraints(
@@ -1218,6 +1298,59 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(String username, double radius, {double? fontSize}) {
+    return Consumer<UserProfileProvider>(
+      builder: (context, userProfileProvider, child) {
+        final profilePic =
+            userProfileProvider.getProfilePicForUsername(username);
+
+        if (profilePic != null && profilePic.isNotEmpty) {
+          try {
+            // Process base64 data properly
+            String base64Data = profilePic;
+
+            // Clean up the base64 string if it has data URL prefix
+            if (base64Data.contains(',')) {
+              base64Data = base64Data.split(',').last.trim();
+            }
+
+            // Decode the base64 data to bytes
+            final imageBytes = base64Decode(base64Data);
+
+            // Return a CircleAvatar with the decoded image
+            return CircleAvatar(
+              radius: radius,
+              backgroundColor: _getUserColor(username),
+              backgroundImage: MemoryImage(imageBytes),
+              // Fallback to initials if image fails to load
+              child: _buildDefaultAvatar(username, radius, fontSize),
+            );
+          } catch (e) {
+            // If decoding fails, return the default avatar
+            return _buildDefaultAvatar(username, radius, fontSize);
+          }
+        }
+
+        return _buildDefaultAvatar(username, radius, fontSize);
+      },
+    );
+  }
+
+  Widget _buildDefaultAvatar(String username, double radius, double? fontSize) {
+    return CircleAvatar(
+      backgroundColor: Colors.transparent,
+      radius: radius,
+      child: Text(
+        _getInitials(username),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSize ?? 13,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

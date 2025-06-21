@@ -112,22 +112,23 @@ class _SplashPageState extends State<SplashPage>
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: theme.primaryColor,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.primaryColor.withOpacity(0.3),
+                            color: Colors.black.withOpacity(0.2),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                             spreadRadius: 2,
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Icon(
-                          Icons.chat_rounded,
-                          size: 60,
-                          color: Colors.white,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/logo/logo.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),

@@ -4,7 +4,8 @@ import 'package:hua/chat/views/chat_page.dart';
 import 'package:hua/chat/providers/chat_provider.dart';
 import 'package:hua/services/notification_service.dart';
 import 'package:hua/services/fcm_service.dart';
-import 'package:hua/profile/views/profile_page.dart';
+import 'package:hua/profile/views/my_profile_page.dart';
+import 'package:hua/profile/providers/my_profile_provider.dart';
 import 'package:hua/theme/app_theme.dart';
 import 'package:hua/theme/theme_controller.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +13,7 @@ import 'auth/providers/auth_provider.dart';
 import 'auth/views/login_page.dart';
 import 'auth/views/signup_page.dart';
 import 'splash/views/splashpage.dart';
+import 'users_profile/providers/user_profile_provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -69,6 +71,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider.value(value: _chatProvider),
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (_) => MyProfileProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
