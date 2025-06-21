@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'chat_theme.dart';
 
@@ -53,46 +54,46 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ),
-
-      // Text Theme
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-        headlineMedium: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
-        headlineSmall: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-        ),
-        titleLarge: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
-        titleMedium: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-        bodyLarge: TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontSize: 16,
-        ),
-        bodyMedium: TextStyle(
-          color: AppColors.textSecondaryLight,
-          fontSize: 14,
-        ),
-        bodySmall: TextStyle(
-          color: AppColors.textSecondaryLight,
-          fontSize: 12,
+      ),      // Text Theme
+      textTheme: GoogleFonts.poppinsTextTheme(
+        const TextTheme(
+          headlineLarge: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineMedium: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineSmall: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+          ),
+          titleLarge: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+          titleMedium: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+          bodyLarge: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 16,
+          ),
+          bodyMedium: TextStyle(
+            color: AppColors.textSecondaryLight,
+            fontSize: 14,
+          ),
+          bodySmall: TextStyle(
+            color: AppColors.textSecondaryLight,
+            fontSize: 12,
+          ),
         ),
       ),
 
@@ -241,46 +242,46 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ),
-
-      // Text Theme
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-        headlineMedium: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
-        headlineSmall: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-        ),
-        titleLarge: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
-        titleMedium: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-        bodyLarge: TextStyle(
-          color: AppColors.textPrimaryDark,
-          fontSize: 16,
-        ),
-        bodyMedium: TextStyle(
-          color: AppColors.textSecondaryDark,
-          fontSize: 14,
-        ),
-        bodySmall: TextStyle(
-          color: AppColors.textSecondaryDark,
-          fontSize: 12,
+      ),      // Text Theme
+      textTheme: GoogleFonts.poppinsTextTheme(
+        const TextTheme(
+          headlineLarge: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineMedium: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineSmall: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+          ),
+          titleLarge: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+          titleMedium: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+          bodyLarge: TextStyle(
+            color: AppColors.textPrimaryDark,
+            fontSize: 16,
+          ),
+          bodyMedium: TextStyle(
+            color: AppColors.textSecondaryDark,
+            fontSize: 14,
+          ),
+          bodySmall: TextStyle(
+            color: AppColors.textSecondaryDark,
+            fontSize: 12,
+          ),
         ),
       ),
 
