@@ -23,8 +23,8 @@ class ProfileUtils {
     Color(0xFF2979FF), // Electric Blue - vibrant and modern
     Color(0xFF00E5FF), // Cyan Accent - bright and electric
     Color(0xFF1DE9B6), // Teal Accent - vibrant aqua
-    Color(
-        0xFFFF6D00), // Orange Accent - warm and vibrant    Color(0xFF8E24AA), // Purple 600 - rich and vibrant
+    Color(0xFFFF6D00), // Orange Accent - warm and vibrant
+    Color(0xFF8E24AA), // Purple 600 - rich and vibrant
     Color(0xFFAB47BC), // Purple 400 - bright and visible purple
     Color(0xFF76FF03), // Light Green Accent - neon lime
     Color(0xFFFFEA00), // Yellow Accent - bright sunshine
@@ -33,13 +33,40 @@ class ProfileUtils {
     Color(0xFF9C27B0), // Purple 500 - rich magenta
     Color(0xFF00ACC1), // Cyan 600 - deep vibrant cyan
     Color(0xFF3F51B5), // Indigo 500 - electric indigo
+    Color(0xFF00BFA5), // Teal A700 - deep vibrant teal
     Color(0xFF4CAF50), // Green 500 - vibrant natural
-    Color(
-        0xFFF44336), // Red 500 - classic vibrant red    Color(0xFFFF9800), // Orange 500 - bright orange
+    Color(0xFFF44336), // Red 500 - classic vibrant red
+    Color(0xFFFF9800), // Orange 500 - bright orange
     Color(0xFF607D8B), // Blue Grey 500 - modern steel
     Color(0xFFD84315), // Deep Orange 800 - vibrant earthy orange
     Color(0xFFFFEB3B), // Yellow 500 - golden bright
     Color(0xFFE91E63), // Pink 500 - vibrant magenta pink
+    // Additional vibrant colors for more variety
+
+    Color(0xFF7C4DFF), // Deep Purple A200 - electric violet
+    Color(0xFFFF6F00), // Orange A700 - intense orange
+    Color(0xFF00BFA5), // Teal A700 - deep vibrant teal
+    Color(0xFF00C853), // Green A700 - vibrant emerald
+    Color(0xFFD500F9), // Purple A400 - neon purple
+    Color(0xFF18FFFF), // Cyan A400 - electric cyan
+    Color(0xFFFF9100), // Orange A400 - bright amber
+    Color(0xFF651FFF), // Deep Purple A400 - royal purple
+    Color(0xFF00E5FF), // Light Blue A400 - sky blue
+    Color(0xFFFF3D00), // Red A400 - fire red
+    Color(0xFFAAEA00), // Light Green A400 - lime accent
+    Color(0xFFFF1744), // Pink A400 - hot pink
+    Color(0xFF536DFE), // Indigo A200 - bright indigo
+    Color(0xFF69F0AE), // Green A200 - mint green
+    Color(0xFFFF4569), // Red A200 - coral red
+    Color(0xFFFFAB40), // Orange A200 - peach orange
+    Color(0xFFE040FB), // Purple A200 - magenta flash
+    Color(0xFF40C4FF), // Light Blue A200 - azure
+    Color(0xFFB2FF59), // Light Green A200 - spring green
+    Color(0xFFFFFF00), // Yellow A200 - electric yellow
+    Color(0xFFFF80AB), // Pink A200 - cotton candy
+    Color(0xFF8C9EFF), // Indigo A100 - lavender blue
+    Color(0xFFA7FFEB), // Teal A100 - aqua mint
+    Color(0xFFFFCCBC), // Deep Orange A100 - apricot
   ];
 
   /// Get a consistent color for a user based on their username
@@ -60,7 +87,7 @@ class ProfileUtils {
 
     // Additional avalanche mixing for better distribution
     hash ^= hash >> 16;
-    hash *= 0x21f0aaad;
+    hash *= 0x21f0abde;
     hash ^= hash >> 15;
     hash *= 0x735a2d97;
     hash ^= hash >> 15;
