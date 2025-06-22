@@ -123,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Stack(
           children: [
-            ProfileUtils.buildProfileAvatar(
+            ProfileUtils.buildFullScreenProfileAvatar(
               username: profile.username,
               profilePic: profile.profilePic,
               radius: 60,

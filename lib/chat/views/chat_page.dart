@@ -196,6 +196,7 @@ class _ChatPageState extends State<ChatPage> {
                             username: chatProvider.username ?? 'User',
                             profilePic: profilePic,
                             radius: 22,
+                            enableFullScreenView: false,
                             onTap: () {
                               Navigator.pushNamed(context, '/profilepage');
                             },
@@ -816,6 +817,7 @@ class _ChatPageState extends State<ChatPage> {
                               username: message.username,
                               profilePic: profilePic,
                               radius: 22,
+                              enableFullScreenView: false,
                               onTap: () {
                                 Navigator.push(
                                   context,

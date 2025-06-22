@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'full_screen_image_viewer.dart';
 
 /// Utility class for managing profile-related UI elements like avatars, colors, and images
 class ProfileUtils {
@@ -206,12 +207,15 @@ class ProfileUtils {
     double? fontSize,
     VoidCallback? onTap,
     List<BoxShadow>? boxShadow,
+    bool enableFullScreenView = false,
   }) {
     final color = getUserColor(username);
     final initials = getInitials(username);
     final imageProvider = getProfileImageProvider(profilePic);
+
+    // Build the base avatar
     Widget avatar = CircleAvatar(
-      backgroundColor: color, // Always set background color as fallback
+      backgroundColor: imageProvider != null ? Colors.transparent : color,
       radius: radius,
       backgroundImage: imageProvider,
       onBackgroundImageError: imageProvider != null
@@ -234,26 +238,90 @@ class ProfileUtils {
           : null,
     );
 
-    // Wrap with container for shadow if provided
-    if (boxShadow != null) {
-      avatar = Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: boxShadow,
+    // Build the complete widget structure in one go
+    return Builder(
+      builder: (BuildContext context) {
+        Widget finalAvatar = avatar;
+
+        // Add Hero wrapper if full screen is enabled and image exists
+        if (enableFullScreenView && imageProvider != null) {
+          finalAvatar = Hero(
+            tag: 'profile_image_$username',
+            child: finalAvatar,
+          );
+        }
+
+        // Add shadow container if provided
+        if (boxShadow != null) {
+          finalAvatar = Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: boxShadow,
+            ),
+            child: finalAvatar,
+          );
+        }
+
+        // Add gesture detector if needed
+        if (onTap != null || (enableFullScreenView && imageProvider != null)) {
+          finalAvatar = GestureDetector(
+            onTap: () {
+              if (enableFullScreenView && imageProvider != null) {
+                // Open full screen image viewer when image exists
+                _openFullScreenImageViewer(
+                  imageProvider: imageProvider,
+                  username: username,
+                  context: context,
+                );
+              } else if (onTap != null) {
+                // Fallback to custom onTap when no image or full screen disabled
+                onTap();
+              }
+            },
+            child: finalAvatar,
+          );
+        }
+
+        return finalAvatar;
+      },
+    );
+  }
+
+  /// Open full screen image viewer
+  static void _openFullScreenImageViewer({
+    required ImageProvider imageProvider,
+    required String username,
+    BuildContext? context,
+  }) {
+    // Use the provided context or try to find one from the widget tree
+    BuildContext? targetContext = context;
+
+    if (targetContext == null) {
+      // Try to get context from the current focus
+      targetContext =
+          WidgetsBinding.instance.focusManager.primaryFocus?.context;
+    }
+
+    if (targetContext != null) {
+      Navigator.of(targetContext).push(
+        PageRouteBuilder(
+          opaque: false,
+          barrierColor: Colors.black,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return FadeTransition(
+              opacity: animation,
+              child: FullScreenImageViewer(
+                imageProvider: imageProvider,
+                username: username,
+                heroTag: 'profile_image_$username',
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+          reverseTransitionDuration: const Duration(milliseconds: 300),
         ),
-        child: avatar,
       );
     }
-
-    // Wrap with GestureDetector if onTap provided
-    if (onTap != null) {
-      avatar = GestureDetector(
-        onTap: onTap,
-        child: avatar,
-      );
-    }
-
-    return avatar;
   }
 
   /// Build a user avatar with default shadow styling
@@ -275,7 +343,7 @@ class ProfileUtils {
       boxShadow: [
         BoxShadow(
           color: color.withOpacity(0.3),
-          blurRadius: 20,
+          blurRadius: 0,
           offset: const Offset(0, 8),
         ),
       ],
@@ -303,6 +371,7 @@ class ProfileUtils {
     String? profilePic,
     double radius = 16,
     VoidCallback? onTap,
+    bool enableFullScreenView = false,
   }) {
     return buildUserAvatar(
       username: username,
@@ -310,22 +379,64 @@ class ProfileUtils {
       radius: radius,
       fontSize: radius * 0.7,
       onTap: onTap,
+      enableFullScreenView: enableFullScreenView,
     );
   }
 
-  /// Create a profile page style avatar with shadow and larger size
+  /// Create a profile page style avatar with larger size
   static Widget buildProfileAvatar({
     required String username,
     String? profilePic,
     double radius = 60,
     VoidCallback? onTap,
+    bool enableFullScreenView = false,
   }) {
-    return buildUserAvatarWithShadow(
+    return buildUserAvatar(
       username: username,
       profilePic: profilePic,
       radius: radius,
       fontSize: radius * 0.55, // Increased from 0.4 to 0.55 for larger text
       onTap: onTap,
+      enableFullScreenView: enableFullScreenView,
+    );
+  }
+
+  /// Create a profile page avatar with full-screen viewing capability
+  static Widget buildFullScreenProfileAvatar({
+    required String username,
+    String? profilePic,
+    double radius = 60,
+    VoidCallback? onTap,
+  }) {
+    return Builder(
+      builder: (BuildContext context) {
+        final imageProvider = getProfileImageProvider(profilePic);
+
+        return GestureDetector(
+          onTap: () {
+            if (imageProvider != null) {
+              // Open full screen image viewer when image exists
+              _openFullScreenImageViewer(
+                imageProvider: imageProvider,
+                username: username,
+                context: context,
+              );
+            } else if (onTap != null) {
+              // Fallback to custom onTap when no image (e.g., image picker)
+              onTap();
+            }
+          },
+          child: Hero(
+            tag: 'profile_image_$username',
+            child: buildUserAvatar(
+              username: username,
+              profilePic: profilePic,
+              radius: radius,
+              fontSize: radius * 0.55,
+            ),
+          ),
+        );
+      },
     );
   }
 

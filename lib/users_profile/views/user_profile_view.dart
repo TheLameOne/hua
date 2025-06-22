@@ -217,7 +217,7 @@ class _UserProfileViewState extends State<UserProfileView> {
     return Column(
       children: [
         // Avatar
-        ProfileUtils.buildProfileAvatar(
+        ProfileUtils.buildFullScreenProfileAvatar(
           username: profile.username,
           profilePic: profile.profilePic,
           radius: 60,
