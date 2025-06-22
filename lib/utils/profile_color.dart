@@ -13,18 +13,33 @@ class ProfileUtils {
 
   // Cache expiry time (30 minutes)
   static const Duration _cacheExpiry = Duration(minutes: 30);
-  static final Map<String, DateTime> _cacheTimestamps = {};
-
-  // Consistent avatar colors used across the app
+  static final Map<String, DateTime> _cacheTimestamps =
+      {}; // Expanded avatar colors palette with vibrant colors for maximum visual impact
   static const List<Color> _avatarColors = [
-    Color(0xFF9C27B0), // Material Purple - good contrast in both themes
-    Color(0xFFE91E63), // Material Pink - vibrant and visible
-    Color(0xFF673AB7), // Deep Purple - balanced visibility
-    Color(0xFF3F51B5), // Material Indigo - works well in both modes
-    Color(0xFF2196F3), // Material Blue - excellent contrast
-    Color(0xFF00BCD4), // Material Cyan - bright and clear
-    Color(0xFF009688), // Material Teal - good saturation
-    Color(0xFFFF9800), // Material Orange - high visibility
+    Color(0xFFFF3D00), // Vibrant Red Orange - electric and bold
+    Color(0xFFE91E63), // Hot Pink - already vibrant and visible
+    Color(0xFF00E676), // Neon Green - electric and fresh
+    Color(0xFFFF1744), // Bright Red - intense and energetic
+    Color(0xFF2979FF), // Electric Blue - vibrant and modern
+    Color(0xFF00E5FF), // Cyan Accent - bright and electric
+    Color(0xFF1DE9B6), // Teal Accent - vibrant aqua
+    Color(
+        0xFFFF6D00), // Orange Accent - warm and vibrant    Color(0xFF8E24AA), // Purple 600 - rich and vibrant
+    Color(0xFFAB47BC), // Purple 400 - bright and visible purple
+    Color(0xFF76FF03), // Light Green Accent - neon lime
+    Color(0xFFFFEA00), // Yellow Accent - bright sunshine
+    Color(0xFFFF4081), // Pink Accent - electric pink
+    Color(0xFFFF5722), // Deep Orange 500 - vibrant warm
+    Color(0xFF9C27B0), // Purple 500 - rich magenta
+    Color(0xFF00ACC1), // Cyan 600 - deep vibrant cyan
+    Color(0xFF3F51B5), // Indigo 500 - electric indigo
+    Color(0xFF4CAF50), // Green 500 - vibrant natural
+    Color(
+        0xFFF44336), // Red 500 - classic vibrant red    Color(0xFFFF9800), // Orange 500 - bright orange
+    Color(0xFF607D8B), // Blue Grey 500 - modern steel
+    Color(0xFFD84315), // Deep Orange 800 - vibrant earthy orange
+    Color(0xFFFFEB3B), // Yellow 500 - golden bright
+    Color(0xFFE91E63), // Pink 500 - vibrant magenta pink
   ];
 
   /// Get a consistent color for a user based on their username
@@ -32,11 +47,31 @@ class ProfileUtils {
     if (username == null || username.isEmpty) return Colors.grey;
     if (username == 'System') return Colors.grey;
 
-    int hash = 0;
+    // Advanced hash function with excellent distribution properties
+    int hash = 0x811c9dc5; // FNV-1a initial hash value
+
+    // FNV-1a hash algorithm with additional mixing
     for (var i = 0; i < username.length; i++) {
-      hash = username.codeUnitAt(i) + ((hash << 5) - hash);
+      int char = username.codeUnitAt(i);
+      hash ^= char;
+      hash *= 0x01000193; // FNV-1a prime
+      hash = hash & 0xFFFFFFFF; // Keep as 32-bit
     }
+
+    // Additional avalanche mixing for better distribution
+    hash ^= hash >> 16;
+    hash *= 0x21f0aaad;
+    hash ^= hash >> 15;
+    hash *= 0x735a2d97;
+    hash ^= hash >> 15;
+
+    // Final mixing with username length for even better distribution
+    hash ^= username.length;
+    hash *= 0x9e3779b9; // Golden ratio based constant
+    hash ^= hash >> 16;
+
     return _avatarColors[hash.abs() % _avatarColors.length];
+    // return _avatarColors[7];
   }
 
   /// Get initials from a username for avatar display
