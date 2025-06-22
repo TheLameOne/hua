@@ -485,6 +485,24 @@ class _ChatPageState extends State<ChatPage> {
               }
             },
           ),
+          ListTile(
+            leading: Icon(
+              Icons.people_outline,
+              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            ),
+            title: Text(
+              'Members',
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context); // Close bottom sheet
+              Navigator.pushNamed(context, '/about');
+            },
+          ),
           // ListTile(
           //   leading: Icon(
           //     Icons.people_outline,

@@ -6,6 +6,7 @@ import 'package:hua/services/notification_service.dart';
 import 'package:hua/services/fcm_service.dart';
 import 'package:hua/profile/views/my_profile_page.dart';
 import 'package:hua/profile/providers/my_profile_provider.dart';
+import 'package:hua/about/views/about_view.dart';
 import 'package:hua/theme/app_theme.dart';
 import 'package:hua/theme/theme_controller.dart';
 import 'package:provider/provider.dart';
@@ -90,7 +91,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               // '/homepage': (context) => const Homepage(),
               '/chatpage': (context) => const ChatPage(),
               // '/usernamepage': (context) => const UsernamePage(),
-              '/profilepage': (context) => const ProfilePage()
+              '/profilepage': (context) => const ProfilePage(),
+              '/about': (context) => const AboutView(),
             },
           );
         },
