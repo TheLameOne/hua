@@ -111,6 +111,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Call API logout endpoint with current token
+      if (_token != null) {
+        try {
+          await _authService.logout(_token!);
+        } catch (e) {
+          debugPrint('API logout failed: $e');
+          // Continue with local logout even if API call fails
+        }
+      }
+
       // Use the clearAuthData convenience method
       final success = await _secureStorage.clearAuthData();
 

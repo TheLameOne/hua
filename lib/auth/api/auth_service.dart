@@ -91,4 +91,37 @@ class AuthService {
       throw Exception('An unexpected error occurred: $e');
     }
   }
+
+  // Logout user
+  Future<void> logout(String token) async {
+    try {
+      final response = await _dio.post(
+        '/logout',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(response.data['message'] ?? 'Logout failed');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        // Server responded with an error
+        final errorData = e.response!.data;
+        throw Exception(errorData['message'] ?? 'Logout failed');
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception(
+            'Connection timeout. Please check your internet connection.');
+      } else {
+        throw Exception(
+            'Network error. Please check your internet connection.');
+      }
+    } catch (e) {
+      throw Exception('An unexpected error occurred: $e');
+    }
+  }
 }

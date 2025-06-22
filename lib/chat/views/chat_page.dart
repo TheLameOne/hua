@@ -8,8 +8,8 @@ import 'package:hua/theme/app_colors.dart';
 import 'package:hua/users_profile/views/user_profile_view.dart';
 import 'package:hua/users_profile/providers/user_profile_provider.dart';
 import 'package:hua/utils/profile_color.dart';
+import 'package:hua/auth/widgets/logout_dialog.dart';
 
-import '../../auth/providers/auth_provider.dart';
 import '../models/chat_message_model.dart';
 
 class ChatPage extends StatefulWidget {
@@ -362,127 +362,7 @@ class _ChatPageState extends State<ChatPage> {
             ),
             onTap: () async {
               Navigator.pop(context); // Close bottom sheet
-
-              // Show a confirmation dialog
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor:
-                      isDark ? AppColors.cardDark : AppColors.cardLight,
-                  title: Text(
-                    'Confirm Logout',
-                    style: TextStyle(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  content: Text(
-                    'Are you sure you want to log out?',
-                    style: TextStyle(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(
-                        'CANCEL',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: Text(
-                        'LOGOUT',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppColors.errorDark
-                              : AppColors.errorLight,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldLogout == true) {
-                // Show loading indicator
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-
-                try {
-                  // Get the auth provider
-                  final authProvider =
-                      Provider.of<AuthProvider>(context, listen: false);
-
-                  // Add timeout to disconnect operation
-                  await Future.any([
-                    chatProvider.disconnect(),
-                    Future.delayed(const Duration(seconds: 3))
-                  ]);
-
-                  // Add timeout to clearing username
-                  await Future.any([
-                    chatProvider.clearStoredUsername(),
-                    Future.delayed(const Duration(seconds: 2))
-                  ]); // Add timeout to logout
-                  await Future.any([
-                    authProvider.logout(),
-                    Future.delayed(const Duration(seconds: 2))
-                  ]);
-
-                  // Clear profile image caches for security
-                  ProfileUtils.clearAllCaches();
-
-                  // Navigate to splash screen
-                  if (mounted) {
-                    // Force navigation even if some operations failed
-                    Navigator.of(context).pop(); // Dismiss loading dialog
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/splashpage',
-                      (route) => false,
-                    );
-                  }
-                } catch (e) {
-                  print('Error during logout: $e');
-
-                  // Ensure we always navigate away even if there's an error
-                  if (mounted) {
-                    Navigator.of(context).pop(); // Dismiss loading dialog
-
-                    // Show error briefly
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Error during logout, but proceeding anyway')),
-                    );
-
-                    // Navigate away after showing error
-                    Future.delayed(const Duration(seconds: 1), () {
-                      if (mounted) {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/splashpage',
-                          (route) => false,
-                        );
-                      }
-                    });
-                  }
-                }
-              }
+              await LogoutDialog.show(context);
             },
           ),
           ListTile(
