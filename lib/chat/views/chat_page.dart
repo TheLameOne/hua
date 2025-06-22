@@ -1080,7 +1080,6 @@ class _ChatPageState extends State<ChatPage> {
     final isConnecting = chatProvider.isConnecting;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1101,60 +1100,76 @@ class _ChatPageState extends State<ChatPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.inputFillDark
-                      : AppColors.inputFillLight,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
+              child: InkWell(
+                child: Container(
+                  decoration: BoxDecoration(
                     color: isDark
-                        ? AppColors.inputBorderDark
-                        : AppColors.inputBorderLight,
-                    width: 1,
-                  ),
-                ),
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _messageFocusNode,
-                  enabled: isConnected,
-                  decoration: InputDecoration(
-                    hintText: isConnecting
-                        ? 'Connecting...'
-                        : isConnected
-                            ? ' Type a message'
-                            : ' Disconnected',
-                    hintStyle: TextStyle(
+                        ? AppColors.inputFillDark
+                        : AppColors.inputFillLight,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
                       color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                      fontSize: 16,
+                          ? AppColors.inputBorderDark
+                          : AppColors.inputBorderLight,
+                      width: 1,
                     ),
-                    border: InputBorder.none,
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide(
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    focusNode: _messageFocusNode,
+                    enabled: isConnected,
+                    onTap: () async {
+                      // Only scroll to bottom if user is near the bottom
+                      if (_scrollController.hasClients) {
+                        final isNearBottom = _scrollController
+                                .position.pixels >=
+                            _scrollController.position.maxScrollExtent - 200;
+
+                        if (isNearBottom) {
+                          await Future.delayed(
+                              const Duration(milliseconds: 400));
+                          _scrollToBottom();
+                        }
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: isConnecting
+                          ? 'Connecting...'
+                          : isConnected
+                              ? ' Type a message'
+                              : ' Disconnected',
+                      hintStyle: TextStyle(
                         color: isDark
-                            ? AppColors.inputFocusedBorderDark
-                            : AppColors.inputFocusedBorderLight,
-                        width: 2,
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                        fontSize: 16,
+                      ),
+                      border: InputBorder.none,
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.inputFocusedBorderDark
+                              : AppColors.inputFocusedBorderLight,
+                          width: 2,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
                       ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(chatProvider),
+                    minLines: 1,
+                    maxLines: 5,
                   ),
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(chatProvider),
-                  minLines: 1,
-                  maxLines: 5,
                 ),
               ),
             ),

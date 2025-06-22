@@ -314,33 +314,6 @@ class _AboutViewState extends State<AboutView> {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
-            // const SizedBox(height: 4),
-            // Member indicator
-            // Container(
-            //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            //   decoration: BoxDecoration(
-            //     color:
-            //         (isDark ? AppColors.primaryDark : AppColors.primaryLight)
-            //             .withOpacity(0.1),
-            //     borderRadius: BorderRadius.circular(12),
-            //     border: Border.all(
-            //       color: (isDark
-            //               ? AppColors.primaryDark
-            //               : AppColors.primaryLight)
-            //           .withOpacity(0.3),
-            //       width: 1,
-            //     ),
-            //   ),
-            //   child: Text(
-            //     'Member',
-            //     style: TextStyle(
-            //       fontSize: 10,
-            //       fontWeight: FontWeight.w500,
-            //       color:
-            //           isDark ? AppColors.primaryDark : AppColors.primaryLight,
-            //     ),
-            //   ),
-            // ),
           ],
         ),
       ),
