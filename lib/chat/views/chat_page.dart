@@ -7,8 +7,14 @@ import 'package:hua/theme/chat_theme.dart';
 import 'package:hua/theme/app_colors.dart';
 import 'package:hua/users_profile/views/user_profile_view.dart';
 import 'package:hua/users_profile/providers/user_profile_provider.dart';
+import 'package:hua/users_profile/model/user_profile_model.dart';
 import 'package:hua/utils/profile_color.dart';
 import 'package:hua/auth/widgets/logout_dialog.dart';
+import 'package:hua/webrtc/providers/webrtc_provider.dart';
+import 'package:hua/webrtc/views/webrtc_view.dart';
+import 'package:hua/webrtc/services/call_overlay_manager.dart';
+import 'package:hua/webrtc/widgets/user_selection_dialog.dart';
+import 'package:hua/webrtc/widgets/incoming_call_dialog.dart';
 
 import '../models/chat_message_model.dart';
 
@@ -19,13 +25,17 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
   bool _showScrollToBottomButton = false;
   int _unreadMessageCount = 0;
   int _lastMessageCount = 0;
+
+  // Global WebRTC provider for handling incoming calls
+  WebRTCProvider? _globalWebRTCProvider;
+  bool _hasActiveCallToJoin = false;
 
   // Message colors - using theme extension
   Color _getOwnMessageColor(BuildContext context) {
@@ -41,7 +51,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _autoConnect();
+    _initializeGlobalWebRTC();
     _messageFocusNode.addListener(_onFocusChange);
     _scrollController
         .addListener(_onScroll); // Fetch all users profile pictures
@@ -56,10 +68,36 @@ class _ChatPageState extends State<ChatPage> {
         ProfileUtils.preloadProfileImages(profilePics);
       });
       _startProfilePicsRefreshTimer();
+      _startActiveCallCheckTimer();
     });
   }
 
+  void _initializeGlobalWebRTC() async {
+    try {
+      _globalWebRTCProvider = WebRTCProvider();
+      await _globalWebRTCProvider!.initialize();
+
+      // Set up incoming call handler
+      _globalWebRTCProvider!.onIncomingCall = _handleIncomingCall;
+
+      // Set up active call detection handler
+      _globalWebRTCProvider!.onActiveCallAvailable = () {
+        if (mounted) {
+          setState(() {
+            _hasActiveCallToJoin = _globalWebRTCProvider!.hasActiveCallToJoin;
+          });
+        }
+      };
+
+      // Check for active calls when the provider is initialized
+      await _globalWebRTCProvider!.checkForActiveCall();
+    } catch (e) {
+      debugPrint('Failed to initialize global WebRTC provider: $e');
+    }
+  }
+
   Timer? _profilePicsRefreshTimer;
+  Timer? _activeCallCheckTimer;
 
   void _startProfilePicsRefreshTimer() {
     // Refresh profile pictures every 5 minutes
@@ -67,6 +105,19 @@ class _ChatPageState extends State<ChatPage> {
         Timer.periodic(const Duration(minutes: 5), (timer) {
       if (mounted) {
         context.read<UserProfileProvider>().fetchAllUsersProfilePics();
+      }
+    });
+  }
+
+  void _startActiveCallCheckTimer() {
+    // Check for active calls every 30 seconds
+    _activeCallCheckTimer =
+        Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted && _globalWebRTCProvider != null) {
+        _globalWebRTCProvider!.checkForActiveCall().catchError((error) {
+          // Silently handle errors in background checks
+          debugPrint('Error checking for active call: $error');
+        });
       }
     });
   }
@@ -112,6 +163,98 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
+  void _handleIncomingCall(String fromId, String callerName) {
+    // Show incoming call dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => IncomingCallDialog(
+        callerName: callerName,
+        callerId: fromId,
+        isVideoCall:
+            true, // For now, assume video call - you can enhance this later
+        onAccept: () {
+          Navigator.of(context).pop();
+          _acceptIncomingCall(fromId, callerName);
+        },
+        onDecline: () {
+          Navigator.of(context).pop();
+          _declineIncomingCall(fromId);
+        },
+      ),
+    );
+  }
+
+  void _acceptIncomingCall(String fromId, String callerName) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Accepting call from $callerName...',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Create WebRTC provider and join call
+      final webrtcProvider = WebRTCProvider();
+      await webrtcProvider.initialize();
+
+      // Join the call instead of starting a new one
+      await webrtcProvider.startVideoCall(); // This will join the existing call
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+
+        // Navigate to WebRTC view
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+              value: webrtcProvider,
+              child: const WebRTCView(
+                isVideoCall: true,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to accept call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _declineIncomingCall(String fromId) {
+    // Just close the dialog - the backend will handle the declined call
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Call declined'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -124,12 +267,32 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _messageFocusNode.dispose();
     _profilePicsRefreshTimer?.cancel();
+    _activeCallCheckTimer?.cancel();
+    _globalWebRTCProvider?.dispose();
     super.dispose();
+  }
+
+  // Add method to refresh active call status
+  void _refreshActiveCallStatus() {
+    if (_globalWebRTCProvider != null) {
+      _globalWebRTCProvider!.checkForActiveCall().catchError((error) {
+        debugPrint('Error refreshing active call status: $error');
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh active call status when app becomes active
+    if (state == AppLifecycleState.resumed) {
+      _refreshActiveCallStatus();
+    }
   }
 
   void _scrollToBottomAnimated() {
@@ -244,6 +407,26 @@ class _ChatPageState extends State<ChatPage> {
                                     : 'Connecting...',
                                 style: theme.textTheme.bodySmall,
                               ),
+                              // Show active call indicator
+                              if (_hasActiveCallToJoin) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Call Active',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.orange,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -253,7 +436,63 @@ class _ChatPageState extends State<ChatPage> {
                 ],
               ),
               actions: [
-                // Add more action buttons here if needed
+                // Join call button (shown when there's an active call to join)
+                if (_hasActiveCallToJoin && !CallOverlayManager.hasActiveCall)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.only(right: 8),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _joinActiveCall(),
+                      icon: Icon(
+                        Icons.call_merge,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        'Join Call${_globalWebRTCProvider?.participants.isNotEmpty == true ? ' (${_globalWebRTCProvider!.participants.length})' : ''}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        minimumSize: const Size(0, 32),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                // Video call button
+                if (!_hasActiveCallToJoin)
+                  IconButton(
+                    icon: Icon(
+                      Icons.videocam,
+                      color: isDark
+                          ? AppColors.primaryDark
+                          : AppColors.primaryLight,
+                    ),
+                    onPressed: () => _startVideoCall(),
+                    tooltip: 'Video Call',
+                  ),
+                // Voice call button
+                if (!_hasActiveCallToJoin)
+                  IconButton(
+                    icon: Icon(
+                      Icons.call,
+                      color: isDark
+                          ? AppColors.primaryDark
+                          : AppColors.primaryLight,
+                    ),
+                    onPressed: () => _startVoiceCall(),
+                    tooltip: 'Voice Call',
+                  ),
+                // More options button
                 IconButton(
                   icon: Icon(
                     Icons.more_vert,
@@ -1199,5 +1438,238 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
     );
+  }
+
+  // WebRTC call methods
+  void _startVideoCall() async {
+    try {
+      // Check if there's already a minimized call
+      if (CallOverlayManager.hasActiveCall) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('A call is already in progress'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show user selection dialog
+      showDialog(
+        context: context,
+        builder: (context) => UserSelectionDialog(
+          isVideoCall: true,
+          onUsersSelected: (selectedUsers) async {
+            await _startCallWithUsers(selectedUsers, true);
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start video call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _startVoiceCall() async {
+    try {
+      // Check if there's already a minimized call
+      if (CallOverlayManager.hasActiveCall) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('A call is already in progress'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show user selection dialog
+      showDialog(
+        context: context,
+        builder: (context) => UserSelectionDialog(
+          isVideoCall: false,
+          onUsersSelected: (selectedUsers) async {
+            await _startCallWithUsers(selectedUsers, false);
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start voice call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _startCallWithUsers(
+      List<UserProfile> selectedUsers, bool isVideoCall) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Starting ${isVideoCall ? 'video' : 'voice'} call with ${selectedUsers.length} user${selectedUsers.length != 1 ? 's' : ''}...',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Create WebRTC provider and initialize
+      final webrtcProvider = WebRTCProvider();
+      await webrtcProvider.initialize();
+
+      // Extract user IDs from selected users
+      final peerIds = selectedUsers.map((user) => user.id).toList();
+
+      // Start the call with selected peer IDs
+      if (isVideoCall) {
+        await webrtcProvider.startVideoCall(peerIds: peerIds);
+      } else {
+        await webrtcProvider.startVoiceCall(peerIds: peerIds);
+      }
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+
+        // Navigate to WebRTC view
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+              value: webrtcProvider,
+              child: WebRTCView(
+                isVideoCall: isVideoCall,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Failed to start ${isVideoCall ? 'video' : 'voice'} call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _joinActiveCall() async {
+    try {
+      // Double-check that there's still an active call to join
+      if (!_hasActiveCallToJoin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No active call found to join'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Joining active call${_globalWebRTCProvider?.participants.isNotEmpty == true ? ' with ${_globalWebRTCProvider!.participants.length} participant${_globalWebRTCProvider!.participants.length != 1 ? 's' : ''}' : ''}...',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Create WebRTC provider and join the active call
+      final webrtcProvider = WebRTCProvider();
+      await webrtcProvider.initialize();
+
+      // Join the active call (default to video call)
+      await webrtcProvider.joinCall(videoEnabled: true, audioEnabled: true);
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+
+        // Navigate to WebRTC view
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+              value: webrtcProvider,
+              child: const WebRTCView(
+                isVideoCall: true,
+              ),
+            ),
+          ),
+        );
+
+        // Reset the active call state since we've joined
+        setState(() {
+          _hasActiveCallToJoin = false;
+        });
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) {
+        Navigator.pop(context);
+
+        // Show error with more context
+        String errorMessage = 'Failed to join call: $e';
+        if (e.toString().contains('camera') ||
+            e.toString().contains('microphone')) {
+          errorMessage =
+              'Please check camera and microphone permissions and try again.';
+        } else if (e.toString().contains('connection') ||
+            e.toString().contains('WebSocket')) {
+          errorMessage =
+              'Connection failed. Please check your internet connection and try again.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+        // Refresh active call status in case the call ended while we were trying to join
+        _refreshActiveCallStatus();
+      }
+    }
   }
 }

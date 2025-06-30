@@ -131,4 +131,52 @@ class UserProfileService {
       return {};
     }
   }
+
+  /// Get all users with their IDs for call selection
+  Future<List<UserProfile>> getAllUsersForCallSelection() async {
+    try {
+      final path = '/usersProfilePic';
+      debugPrint('Fetching all users for call selection from: $baseUrl$path');
+
+      final response = await _dio.get(path);
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData.containsKey('data')) {
+          final List<dynamic> usersList = responseData['data'];
+          final List<UserProfile> users = [];
+
+          for (final user in usersList) {
+            final id = user['id'] as String?;
+            final username = user['username'] as String?;
+            final profilePic = user['profilePic'] as String?;
+
+            if (id != null && username != null) {
+              users.add(UserProfile(
+                id: id,
+                username: username,
+                profilePic: (profilePic?.isEmpty ?? true) ? null : profilePic,
+                bio: null, // Bio is not available in this API
+              ));
+            }
+          }
+
+          return users;
+        }
+      }
+
+      return [];
+    } on DioException catch (e) {
+      debugPrint(
+          'DioException fetching users for call selection: ${e.message}');
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching users for call selection: $e');
+      return [];
+    }
+  }
 }

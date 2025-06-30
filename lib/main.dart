@@ -9,6 +9,7 @@ import 'package:hua/profile/providers/my_profile_provider.dart';
 import 'package:hua/about/views/about_view.dart';
 import 'package:hua/theme/app_theme.dart';
 import 'package:hua/theme/theme_controller.dart';
+import 'package:hua/webrtc/providers/webrtc_provider.dart';
 import 'package:provider/provider.dart';
 import 'auth/providers/auth_provider.dart';
 import 'auth/views/login_page.dart';
@@ -65,7 +66,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _chatProvider.handleAppLifecycleState(state);
   }
 
-  // This widget is the root of your application.  @override
+  // This widget is the root of your application.
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
@@ -74,6 +76,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => MyProfileProvider()),
+        ChangeNotifierProvider(create: (_) => WebRTCProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -93,6 +96,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               // '/usernamepage': (context) => const UsernamePage(),
               '/profilepage': (context) => const ProfilePage(),
               '/about': (context) => const AboutView(),
+              // '/web-rtc': (context) => const WebRTCPage(),
             },
           );
         },
